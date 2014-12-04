@@ -47,7 +47,7 @@ IplImage* YUV420_To_IplImage_Opencv(unsigned char* pYUV420, int width, int heigh
 
 AcceptClient::AcceptClient(int clientId,uv_loop_t*loop)
 {
-	
+
 	isplay = false;
 	isclosed = true;
 	threadId = 0;
@@ -59,13 +59,13 @@ AcceptClient::AcceptClient(int clientId,uv_loop_t*loop)
 	closecb_userdata = NULL;
 	isuseraskforclosed = false;
 	resource_index = 0;
-	
+
 	int r;
 	read_buf = uv_buf_init((char*)malloc(BUFFER_SIZE),BUFFER_SIZE);
-	write_buf = uv_buf_init((char*)malloc(BUFFER_SIZE),BUFFER_SIZE);
+	//write_buf = uv_buf_init((char*)malloc(BUFFER_SIZE),BUFFER_SIZE);
 	r = uv_mutex_init(&mutex_write_buf);
 	assert(r == 0);
-	 r = uv_mutex_init(&mutex_writereq);
+	r = uv_mutex_init(&mutex_writereq);
 	assert(r == 0);
 	init();
 
@@ -73,8 +73,26 @@ AcceptClient::AcceptClient(int clientId,uv_loop_t*loop)
 }
 AcceptClient::~AcceptClient()
 {
-	Close();
-	
+	closeinl();
+	while (!isclosed)
+	{
+		Sleep(10);
+
+
+	}
+	if (read_buf.base)
+	{
+		free(read_buf.base);
+		read_buf.base = NULL;
+	}
+// 	if (write_buf.base)
+// 	{
+// 		free(write_buf.base);
+// 		write_buf.base = NULL;
+// 	}
+	uv_mutex_destroy(&mutex_write_buf);
+	uv_mutex_destroy(&mutex_writereq);
+
 }
 void AcceptClient::closeinl()
 {
@@ -84,11 +102,18 @@ void AcceptClient::closeinl()
 	}
 	if(threadId !=0)
 	{
-		isplay = false;
-		uv_thread_join(&threadId);
-		threadId = 0;
+	//	isplay = false;
+	//	uv_thread_join(&threadId);
+	//	threadId = 0;
 
 	}
+	uv_mutex_lock(&mutex_writereq);
+	for (auto it = writereq_list.begin(); it != writereq_list.end();++it)
+	{
+		free(*it);
+	}
+	writereq_list.clear();
+	uv_mutex_unlock(&mutex_writereq);
 	uv_close((uv_handle_t*)&client_handle,AfterClientClose);
 	uv_close((uv_handle_t*)&prepare_handle,AfterClientClose);
 }
@@ -116,9 +141,9 @@ void AcceptClient::AfterClientClose( uv_handle_t *handle )
 			//通知TCPServer此客户端已经关闭
 			theclass->closecb(theclass->client_id,theclass->closecb_userdata);
 		}
-		
+
 	}
-	
+
 
 }
 
@@ -129,10 +154,9 @@ void AcceptClient::PrepareCB( uv_prepare_t* handle )
 	if (theclass->isuseraskforclosed)
 	{
 		theclass->closeinl();
-		
+
 		return;
 	}
-	uv_write_t *req = NULL;
 	if(!theclass->image_pool.isEmpty())
 	{
 		auto_ptr<ReceivedImage> image =theclass->image_pool.pop();
@@ -142,23 +166,51 @@ void AcceptClient::PrepareCB( uv_prepare_t* handle )
 			return;
 		}
 
-			IplImage *img = YUV420_To_IplImage_Opencv(recvimage->pImg, recvimage->ImgWidth, recvimage->ImgHeight);
-			CvSize cz = cvSize(640,480);
-			IplImage *NewImg = cvCreateImage(cz,img->depth,img->nChannels);
-	
-			Mat src(NewImg);
-			vector<uchar> buff;//buffer for coding
-			vector<int> param = vector<int>(2);
-			param[0]=CV_IMWRITE_JPEG_QUALITY;
-			param[1]=60;//default(95) 0-100
-			imencode(".jpg",src,buff,param);
-			//uv_buf_t resbuf;
-			theclass->write_buf.base = (char*)(&buff[0]);
-			theclass->write_buf.len = buff.size();
-			uv_write_t *write_req = (uv_write_t*)malloc(sizeof(*write_req));
-			uv_write(write_req,(uv_stream_t*)&theclass->client_handle,&theclass->write_buf,1,AfterSend);
-			cvReleaseImage(&NewImg);//释放图像内存
-			cvReleaseImage(&img);
+		IplImage *img = YUV420_To_IplImage_Opencv(recvimage->pImg, recvimage->ImgWidth, recvimage->ImgHeight);
+		CvSize cz = cvSize(640,480);
+		IplImage *NewImg = cvCreateImage(cz,img->depth,img->nChannels);
+
+		Mat src(NewImg);
+		vector<uchar> buff;//buffer for coding
+		vector<int> param = vector<int>(2);
+		param[0]=CV_IMWRITE_JPEG_QUALITY;
+		param[1]=60;//default(95) 0-100
+		imencode(".jpg",src,buff,param);
+		uv_write_t *write_req = NULL;
+		//uv_buf_t resbuf;
+		uv_mutex_lock(&theclass->mutex_write_buf);
+		theclass->write_buf.base = (char*)(&buff[0]);
+		theclass->write_buf.len = buff.size();
+		uv_mutex_unlock(&theclass->mutex_write_buf);
+		uv_mutex_lock(&theclass->mutex_writereq);
+		if (theclass->writereq_list.empty())
+		{
+			uv_mutex_unlock(&theclass->mutex_writereq);
+			write_req = (uv_write_t*)malloc(sizeof(*write_req));
+			write_req->data = theclass;
+			
+		}
+		else
+		{
+			write_req = theclass->writereq_list.front();
+			theclass->writereq_list.pop_front();
+			uv_mutex_unlock(&theclass->mutex_writereq);
+
+		}
+		
+		//uv_write_t *write_req = (uv_write_t*)malloc(sizeof(*write_req));
+		int r =uv_write(write_req,(uv_stream_t*)&theclass->client_handle,&theclass->write_buf,1,AfterSend);
+		if (r)
+		{
+			uv_mutex_lock(&theclass->mutex_writereq);
+			theclass->writereq_list.push_back(write_req);//发送失败不会调用AfterSend
+			uv_mutex_unlock(&theclass->mutex_writereq);
+			
+			 fprintf(stdout,"send error. %s-%s\n",uv_err_name(r),uv_strerror(r));
+		}
+	//	theclass->write_buf.base
+		cvReleaseImage(&NewImg);//释放图像内存
+		cvReleaseImage(&img);
 	}
 
 
@@ -166,11 +218,13 @@ void AcceptClient::PrepareCB( uv_prepare_t* handle )
 void AcceptClient::AfterSend( uv_write_t *req, int status )
 {
 	printf("0\n");
-	if (req)
-	{
-		free(req);
-	}
+	//回收uv_write_t
+	AcceptClient *theclass = (AcceptClient*)req->data;
+	uv_mutex_lock(&theclass->mutex_writereq);
+	theclass->writereq_list.push_back(req);
+	uv_mutex_unlock(&theclass->mutex_writereq);
 	
+
 	//回收uv_write_t
 	if (status < 0) 
 	{
@@ -204,10 +258,10 @@ void AcceptClient::GetPacket( const NetPacket& packethead, const  char* packetda
 		return;
 	}
 	AcceptClient *theclass = (AcceptClient*)userdata;
-	
+
 	if (theclass->recvcb) 
 	{//把得到的数据回调给用户
-		theclass->recvcb(theclass->client_id,packethead,packetdata,theclass);
+		theclass->recvcb(theclass->client_id,theclass,packetdata,theclass->recvcb_userdata);
 	}
 }
 void AcceptClient::AllocBufferForRecv(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf)
@@ -218,38 +272,39 @@ void AcceptClient::AllocBufferForRecv(uv_handle_t *handle, size_t suggested_size
 }
 void AcceptClient::AfterRecv(uv_stream_t *handle, ssize_t nread, const uv_buf_t* buf)
 {
-	    AcceptClient *theclass = (AcceptClient*)handle->data;//服务器的recv带的是clientdata
+	AcceptClient *theclass = (AcceptClient*)handle->data;//服务器的recv带的是clientdata
 
-		 assert(theclass);
-		 if (nread < 0)
-		 {/* Error or EOF */
-			 if (nread == UV_EOF) 
-			 {
-				 fprintf(stdout,"客户端(%d)主动断开\n",theclass->client_id);
-				
-			 }
-			 else if (nread == UV_ECONNRESET) 
-			 {
-				 fprintf(stdout,"客户端(%d)异常断开\n",theclass->client_id);
-				// LOGW("客户端("<<theclass->clientId<<")异常断开");
-			 }
-			 else 
-			 {
-				 fprintf(stdout,"%s\n",uv_errno_t(nread));
-				// LOGW("客户端("<<theclass->client_id_<<")异常断开："<<GetUVError(nread));
-			 }
-			 theclass->Close();
-			 return;
-		 } 
-		 else if (0 == nread) 
-		 {
-			 /* Everything OK, but nothing read. */
+	assert(theclass);
+	if (nread < 0)
+	{
+		/* Error or EOF */
+		if (nread == UV_EOF) 
+		{
+			fprintf(stdout,"客户端(%d)主动断开\n",theclass->client_id);
 
-		 } 
-		 else 
-		 {
-			 theclass->readpacket_.recvdata((const unsigned char*)buf->base,nread);//新方式-解析完包后再回调数据
-		 }
+		}
+		else if (nread == UV_ECONNRESET) 
+		{
+			fprintf(stdout,"客户端(%d)异常断开\n",theclass->client_id);
+			// LOGW("客户端("<<theclass->clientId<<")异常断开");
+		}
+		else 
+		{
+			fprintf(stdout,"%s\n",uv_errno_t(nread));
+			// LOGW("客户端("<<theclass->client_id_<<")异常断开："<<GetUVError(nread));
+		}
+		theclass->Close();
+		return;
+	} 
+	else if (0 == nread) 
+	{
+		/* Everything OK, but nothing read. */
+
+	} 
+	else 
+	{
+		theclass->readpacket_.recvdata((const unsigned char*)buf->base,nread);//新方式-解析完包后再回调数据
+	}
 }
 bool AcceptClient::AcceptByServer( uv_tcp_t* server )
 {
@@ -276,12 +331,18 @@ void AcceptClient::SetClosedCB(TcpCloseCB cb,void *userdata)
 }
 int AcceptClient::Send(const char* data, std::size_t len)
 {
-	  uv_write_t *req = NULL;
-	  req = (uv_write_t*)malloc(sizeof(*req));
-	  write_buf.base = (char*)data;
-	  write_buf.len = len;
-	  int r = uv_write(req,(uv_stream_t*)&client_handle,&write_buf,1,AfterSend);
-	  return r;
+	uv_write_t *req = NULL;
+	req = (uv_write_t*)malloc(sizeof(*req));
+	write_buf.base = (char*)data;
+	write_buf.len = len;
+	int r = uv_write(req,(uv_stream_t*)&client_handle,&write_buf,1,AfterSend);
+	return r;
+}
+int AcceptClient::Send(UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight, UINT uiTimeStamp)
+{
+	image_pool.push(pImg,ImgWidth,ImgHeight,uiTimeStamp);
+	return 0;
+
 }
 TcpServer::TcpServer(void)
 {
@@ -305,11 +366,25 @@ TcpServer::TcpServer(void)
 		errmsg = uv_strerror(r);
 		fprintf(stdout,"init loop error: %s\n",errmsg.c_str());
 	}
+	r = uv_mutex_init(&mutex_puid_client);
+	if(r)
+	{
+		errmsg = uv_strerror(r);
+		fprintf(stdout,"init loop error: %s\n",errmsg.c_str());
+	}
+	r = uv_mutex_init(&mutex_puid_count);
+	if(r)
+	{
+		errmsg = uv_strerror(r);
+		fprintf(stdout,"init loop error: %s\n",errmsg.c_str());
+	}
 }
 TcpServer::~TcpServer(void)
 {
 	Close();
 	uv_mutex_destroy(&mutex_clients);
+	uv_mutex_destroy(&mutex_puid_client);
+	uv_mutex_destroy(&mutex_puid_count);
 	uv_loop_close(&loop);
 
 }
@@ -346,42 +421,74 @@ void TcpServer::closeinl()
 }
 void TcpServer::AfterServerClose(uv_handle_t *handle)
 {
-	 TcpServer *theclass = (TcpServer*)handle->data;
-	 if (handle == (uv_handle_t *)&theclass->server_handle)
-	 {
-		 handle->data = 0;//赋值0，用于判断是否调用过
-	 }
-	 if (handle == (uv_handle_t *)&theclass->prepare_handle) 
-	 {
-		 handle->data = 0;//赋值0，用于判断是否调用过
-	 }
-	 if (handle == (uv_handle_t *)&theclass->check_handle)
-	 {
-		 handle->data = 0;//赋值0，用于判断是否调用过
-	 }
-	 if (handle == (uv_handle_t *)&theclass->idle_handle) 
-	 {
-		 handle->data = 0;//赋值0，用于判断是否调用过
-	 }
-	 if (theclass->server_handle.data == 0
-		 && theclass->prepare_handle.data == 0
-		 && theclass->check_handle.data == 0
-		 && theclass->idle_handle.data == 0)
-	 {
-			 theclass->isclosed = true;
-			 theclass->isuseraskforclosed = false;
-			
-			 if (theclass->closedcb) 
-			 {//通知TCPServer此客户端已经关闭
-				 theclass->closedcb(-1,theclass->closedcb_userdata);
-			 }
-	 }
+	TcpServer *theclass = (TcpServer*)handle->data;
+	if (handle == (uv_handle_t *)&theclass->server_handle)
+	{
+		handle->data = 0;//赋值0，用于判断是否调用过
+	}
+	if (handle == (uv_handle_t *)&theclass->prepare_handle) 
+	{
+		handle->data = 0;//赋值0，用于判断是否调用过
+	}
+	if (handle == (uv_handle_t *)&theclass->check_handle)
+	{
+		handle->data = 0;//赋值0，用于判断是否调用过
+	}
+	if (handle == (uv_handle_t *)&theclass->idle_handle) 
+	{
+		handle->data = 0;//赋值0，用于判断是否调用过
+	}
+	if (theclass->server_handle.data == 0
+		&& theclass->prepare_handle.data == 0
+		&& theclass->check_handle.data == 0
+		&& theclass->idle_handle.data == 0)
+	{
+		theclass->isclosed = true;
+		theclass->isuseraskforclosed = false;
+
+		if (theclass->closedcb) 
+		{//通知TCPServer此客户端已经关闭
+			theclass->closedcb(-1,theclass->closedcb_userdata);
+		}
+	}
 
 }
 void TcpServer::ClientClosed(int clientid,void *userdata)
 {
 	TcpServer *theclass = (TcpServer*)userdata;
+	//删除clientId对应的puid
+	string puid="";
+	uv_mutex_lock(&theclass->mutex_puid_client);
+	auto it2 = theclass->puid_client_map.begin();
+	for ( ;it2 != theclass->puid_client_map.end();++it2)
+	{
+		if (it2->second == clientid)
+		{
+			puid = it2->first;
+			theclass->puid_client_map.erase(it2);
+			break;
+			
+		}
+	}
+	auto it3 = theclass->puid_count_map.find(puid);
+	if (it3 != theclass->puid_count_map.end())
+	{
+		(it3->second)--;
+		if (it3->second == 0)
+		{
+			auto it4 = theclass->puid_thread_map.find(puid);
+			if (it4 != theclass->puid_thread_map.end())
+			{
+				uv_thread_join(&it4->second);
+				theclass->puid_thread_map.erase(it4->first);
+			}
+		}
+	}
+	
+	uv_mutex_unlock(&theclass->mutex_puid_client);
 	uv_mutex_lock(&theclass->mutex_clients);
+
+
 	auto it = theclass->clients_list.find(clientid);
 	if (it != theclass->clients_list.end())
 	{
@@ -390,21 +497,23 @@ void TcpServer::ClientClosed(int clientid,void *userdata)
 	delete it->second;
 	fprintf(stdout,"删除客户端：%d\n",it->first);
 	theclass->clients_list.erase(it->first);
-
 	uv_mutex_unlock(&theclass->mutex_clients);
+
 
 }
 void TcpServer::CheckCB( uv_check_t* handle )
 {
-	TcpServer *theclass = (TcpServer*)handle->data;
+	//TcpServer *theclass = (TcpServer*)handle->data;
 	//check阶段暂时不处理任何事情
 }
 
 void TcpServer::IdleCB(uv_idle_t *handle)
 {
-	TcpServer *theclass = (TcpServer*)handle->data;
-
+	//TcpServer *theclass = (TcpServer*)handle->data;
+	//Idle阶段暂时不处理任何事情
 }
+
+
 bool TcpServer::init()
 {
 	if (!isclosed) 
@@ -445,9 +554,9 @@ void TcpServer::PrepareCB( uv_prepare_t* handle )
 	{
 		theclass->closeinl();
 	}
-	
+
 	//检测是否关闭
-	
+
 }
 void TcpServer::AcceptConnection(uv_stream_t *server, int status)
 {
@@ -463,23 +572,23 @@ void TcpServer::AcceptConnection(uv_stream_t *server, int status)
 		return;
 	}
 	int clientId = tcpServer->GetAvailaClientID();
-	 AcceptClient* client = new AcceptClient(clientId,&tcpServer->loop);//uv_close回调函数中释放
-	 uv_mutex_lock(&tcpServer->mutex_clients);
-	 tcpServer->clients_list.insert(make_pair(clientId,client));
-	 uv_mutex_unlock(&tcpServer->mutex_clients);
-	 client->SetClosedCB(ClientClosed,tcpServer);
-	 if(!client->AcceptByServer((uv_tcp_t*)server)) 
-	 {
-		
-		 tcpServer->errmsg = client->GetLastErrMsg();
-		 client->Close();
-		 return;
-	 }
-	 if (tcpServer->newconcb)
-	 {
-		 tcpServer->newconcb(clientId,tcpServer->newconcb_userdata);
-	 }
-	
+	AcceptClient* client = new AcceptClient(clientId,&tcpServer->loop);//uv_close回调函数中释放
+	uv_mutex_lock(&tcpServer->mutex_clients);
+	tcpServer->clients_list.insert(make_pair(clientId,client));
+	uv_mutex_unlock(&tcpServer->mutex_clients);
+	client->SetClosedCB(ClientClosed,tcpServer);
+	if(!client->AcceptByServer((uv_tcp_t*)server)) 
+	{
+
+		tcpServer->errmsg = client->GetLastErrMsg();
+		client->Close();
+		return;
+	}
+	if (tcpServer->newconcb)
+	{
+		tcpServer->newconcb(clientId,tcpServer->newconcb_userdata);
+	}
+
 
 
 }
@@ -535,7 +644,7 @@ bool TcpServer::listen(int backlog)
 
 void TcpServer::StartThread( void* arg )
 {
-	printf("ThreadId=%d\n",uv_thread_self());
+	printf("ThreadId=%p\n",uv_thread_self());
 	TcpServer *theclass = (TcpServer*)arg;
 	theclass->startstatus = START_FINISH;
 	theclass->run();
@@ -580,8 +689,8 @@ bool TcpServer::Start(const char *ip, int port)
 		}
 	}
 	return startstatus == START_FINISH;
+
 	
-	return true;
 
 }
 
@@ -591,10 +700,26 @@ int TcpServer::Send(int clientid, const char* data, std::size_t len)
 	auto itfind = clients_list.find(clientid);
 	if (itfind == clients_list.end())
 	{
-		
+
 		return -1;
 	}
 	itfind->second->Send(data,len);
 	uv_mutex_unlock(&mutex_clients);
-	return 1;
+	return 0;
+}
+int TcpServer::Send(int clientid,UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight, UINT uiTimeStamp)
+{
+	uv_mutex_lock(&mutex_clients);
+	auto itfind = clients_list.find(clientid);
+	if (itfind == clients_list.end())
+	{
+		uv_mutex_unlock(&mutex_clients);
+		errmsg = "can't find cliendid ";
+		errmsg += std::to_string((long long)clientid);
+		printf("%s\n",errmsg.c_str());
+		return -1;
+	}
+	itfind->second->Send(pImg,ImgWidth,ImgHeight,uiTimeStamp);
+	uv_mutex_unlock(&mutex_clients);
+	return 0;
 }

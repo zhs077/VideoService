@@ -12,6 +12,8 @@ using namespace std;
 #ifndef BUFFER_SIZE
 #define BUFFER_SIZE (1024*1024)
 #endif
+
+
 class AcceptClient
 {
 public:
@@ -20,8 +22,10 @@ public:
 	bool AcceptByServer( uv_tcp_t *server );
 	void SetRecvCB(ServerRecvCB pfun, void *userdata);//设置接收数据回调函数
 	void SetClosedCB(TcpCloseCB,void *userdata);//设置关闭的回调函数
-	int Send(const char* data, std::size_t len);
+	int  Send(const char* data, std::size_t len);
+	int  Send(UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight, UINT uiTimeStamp);
 	void Close(){isuseraskforclosed = true;}
+	bool IsClose(){return isuseraskforclosed;}
 	const char* GetLastErrMsg() const 
 	{
 		return errmsg.c_str();
@@ -81,6 +85,7 @@ public:
 		return errmsg.c_str();
 	};
 	int  Send(int clientid, const char* data, std::size_t len);
+	int  Send(int clientid,UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight, UINT uiTimeStamp);
 	void SetNewConnectCB(NewConnectCB,void *userdata);
 	void SetClosedCB(TcpCloseCB,void *userdata );
 	void SetRecvCB(int clientid,ServerRecvCB cb, void *userdata);//设置接收回调函数，每个客户端各有一个
@@ -134,6 +139,15 @@ private:
 	ServerRecvCB recvcb;//接收数据回调给用户的函数
 	TcpCloseCB closedcb;//关闭后回调给TCPServer
 	void *closedcb_userdata;
+
+public:
+	
+	multimap<string,int> puid_client_map;//播放的视频对应的客户端ID
+	uv_mutex_t mutex_puid_client;
+	map<string,atomic<int> > puid_count_map;//播放视频对应的次数
+	map<string,uv_thread_t> puid_thread_map;
+	uv_mutex_t mutex_puid_count;
+	
 
 
 };

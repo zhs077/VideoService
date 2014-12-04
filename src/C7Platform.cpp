@@ -11,6 +11,12 @@ C7Platform::C7Platform(void)
 
 C7Platform::~C7Platform(void)
 {
+	UnInit();
+}
+void C7Platform::UnInit()
+{
+	VADR_GlobalClose();
+	C7_Terminate();
 }
 bool C7Platform::Init(const string& current_path)
 {

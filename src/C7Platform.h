@@ -22,6 +22,7 @@ public:
 	~C7Platform(void);
 	//初始化C7环境
 	static bool Init(const string& current_path);
+	static void UnInit();
 	public:
 	static C7_HSESSION session;
 public:
