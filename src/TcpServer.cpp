@@ -1,49 +1,5 @@
 #include "TcpServer.h"
-IplImage* YUV420_To_IplImage_Opencv(unsigned char* pYUV420, int width, int height)
-{
-	if (!pYUV420)
-	{
-		return NULL;
-	}
 
-	IplImage *yuvimage,*rgbimg,*yimg,*uimg,*vimg,*uuimg,*vvimg;
-
-	int nWidth = width;
-	int nHeight = height;
-	rgbimg = cvCreateImage(cvSize(nWidth, nHeight),IPL_DEPTH_8U,3);
-	yuvimage = cvCreateImage(cvSize(nWidth, nHeight),IPL_DEPTH_8U,3);
-
-	yimg = cvCreateImageHeader(cvSize(nWidth, nHeight),IPL_DEPTH_8U,1);
-	uimg = cvCreateImageHeader(cvSize(nWidth/2, nHeight/2),IPL_DEPTH_8U,1);
-	vimg = cvCreateImageHeader(cvSize(nWidth/2, nHeight/2),IPL_DEPTH_8U,1);
-
-	uuimg = cvCreateImage(cvSize(nWidth, nHeight),IPL_DEPTH_8U,1);
-	vvimg = cvCreateImage(cvSize(nWidth, nHeight),IPL_DEPTH_8U,1);
-
-	cvSetData(yimg,pYUV420, nWidth);
-	cvSetData(uimg,pYUV420+nWidth*nHeight, nWidth/2);
-	cvSetData(vimg,pYUV420+long(nWidth*nHeight*1.25), nWidth/2);
-	cvResize(uimg,uuimg,CV_INTER_LINEAR);
-	cvResize(vimg,vvimg,CV_INTER_LINEAR);
-
-	cvMerge(yimg,uuimg,vvimg,NULL,yuvimage);
-	cvCvtColor(yuvimage,rgbimg,CV_YCrCb2RGB);
-
-	cvReleaseImage(&uuimg);
-	cvReleaseImage(&vvimg);
-	cvReleaseImageHeader(&yimg);
-	cvReleaseImageHeader(&uimg);
-	cvReleaseImageHeader(&vimg);
-
-	cvReleaseImage(&yuvimage);
-
-	if (!rgbimg)
-	{
-		return NULL;
-	}
-
-	return rgbimg;
-}
 
 AcceptClient::AcceptClient(int clientId,uv_loop_t*loop)
 {
@@ -61,12 +17,13 @@ AcceptClient::AcceptClient(int clientId,uv_loop_t*loop)
 	resource_index = 0;
 
 	int r;
-	read_buf = uv_buf_init((char*)malloc(BUFFER_SIZE),BUFFER_SIZE);
+	read_buf = uv_buf_init((char*)malloc(100),100);
 	//write_buf = uv_buf_init((char*)malloc(BUFFER_SIZE),BUFFER_SIZE);
 	r = uv_mutex_init(&mutex_write_buf);
 	assert(r == 0);
 	r = uv_mutex_init(&mutex_writereq);
 	assert(r == 0);
+	memset(read_buffer,0,100);
 	init();
 
 
@@ -107,6 +64,7 @@ void AcceptClient::closeinl()
 	//	threadId = 0;
 
 	}
+	
 	uv_mutex_lock(&mutex_writereq);
 	for (auto it = writereq_list.begin(); it != writereq_list.end();++it)
 	{
@@ -157,19 +115,29 @@ void AcceptClient::PrepareCB( uv_prepare_t* handle )
 
 		return;
 	}
-	if(!theclass->image_pool.isEmpty())
+	if (theclass->isclosed)
 	{
-		auto_ptr<ReceivedImage> image =theclass->image_pool.pop();
-		ReceivedImage* recvimage =image.get();
-		if (recvimage == NULL)
-		{
-			return;
-		}
+		return;
+	}
+	if(!theclass->iplImage_pool.empty())
+	{
+// 		auto_ptr<ReceivedImage> image =theclass->image_pool.pop();
+// 		ReceivedImage* recvimage =image.get();
+// 		if (recvimage == NULL)
+// 		{
+// 			return;
+// 		}
 
-		IplImage *img = YUV420_To_IplImage_Opencv(recvimage->pImg, recvimage->ImgWidth, recvimage->ImgHeight);
+// 		IplImage *img = YUV420_To_IplImage_Opencv(recvimage->pImg, recvimage->ImgWidth, recvimage->ImgHeight);
+// 		assert(img);
+// 		CvSize cz = cvSize(640,480);
+// 		IplImage *NewImg = cvCreateImage(cz,img->depth,img->nChannels);
+		uv_mutex_lock(&theclass->mutex_write_buf);
+		IplImage *image = theclass->iplImage_pool.front();
+		theclass->iplImage_pool.pop();
+		uv_mutex_unlock(&theclass->mutex_write_buf);
 		CvSize cz = cvSize(640,480);
-		IplImage *NewImg = cvCreateImage(cz,img->depth,img->nChannels);
-
+		IplImage *NewImg = cvCreateImage(cz,image->depth,image->nChannels);
 		Mat src(NewImg);
 		vector<uchar> buff;//buffer for coding
 		vector<int> param = vector<int>(2);
@@ -210,7 +178,7 @@ void AcceptClient::PrepareCB( uv_prepare_t* handle )
 		}
 	//	theclass->write_buf.base
 		cvReleaseImage(&NewImg);//释放图像内存
-		cvReleaseImage(&img);
+		cvReleaseImage(&image);
 	}
 
 
@@ -246,24 +214,24 @@ bool AcceptClient::init()
 
 	client_handle.data = this;
 	//启动read封装类
-	readpacket_.SetPacketCB(GetPacket,this);
+	//readpacket_.SetPacketCB(GetPacket,this);
 	isclosed = false;
 	return true;
 }
-//回调一帧数据给用户
-void AcceptClient::GetPacket( const NetPacket& packethead, const  char* packetdata, void* userdata )
-{
-	if (!userdata)
-	{
-		return;
-	}
-	AcceptClient *theclass = (AcceptClient*)userdata;
-
-	if (theclass->recvcb) 
-	{//把得到的数据回调给用户
-		theclass->recvcb(theclass->client_id,theclass,packetdata,theclass->recvcb_userdata);
-	}
-}
+// 回调数据给用户
+// void AcceptClient::GetPacket( const NetPacket& packethead, const  char* packetdata, void* userdata )
+// {
+// 	if (!userdata)
+// 	{
+// 		return;
+// 	}
+// 	AcceptClient *theclass = (AcceptClient*)userdata;
+// 
+// 	if (theclass->recvcb) 
+// 	{//把得到的数据回调给用户
+// 		theclass->recvcb(theclass->client_id,theclass,packetdata,theclass->recvcb_userdata);
+// 	}
+// }
 void AcceptClient::AllocBufferForRecv(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf)
 {
 	AcceptClient *client = (AcceptClient*)handle->data;
@@ -273,7 +241,6 @@ void AcceptClient::AllocBufferForRecv(uv_handle_t *handle, size_t suggested_size
 void AcceptClient::AfterRecv(uv_stream_t *handle, ssize_t nread, const uv_buf_t* buf)
 {
 	AcceptClient *theclass = (AcceptClient*)handle->data;//服务器的recv带的是clientdata
-
 	assert(theclass);
 	if (nread < 0)
 	{
@@ -303,7 +270,14 @@ void AcceptClient::AfterRecv(uv_stream_t *handle, ssize_t nread, const uv_buf_t*
 	} 
 	else 
 	{
-		theclass->readpacket_.recvdata((const unsigned char*)buf->base,nread);//新方式-解析完包后再回调数据
+		if(theclass->recvcb)
+		{
+
+			memcpy(theclass->read_buffer,buf->base,nread);
+			theclass->recvcb(theclass->client_id,theclass,theclass->read_buffer,theclass->recvcb_userdata);
+		}
+		
+		//theclass->readpacket_.recvdata((const unsigned char*)buf->base,nread);//新方式-解析完包后再回调数据
 	}
 }
 bool AcceptClient::AcceptByServer( uv_tcp_t* server )
@@ -340,7 +314,26 @@ int AcceptClient::Send(const char* data, std::size_t len)
 }
 int AcceptClient::Send(UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight, UINT uiTimeStamp)
 {
-	image_pool.push(pImg,ImgWidth,ImgHeight,uiTimeStamp);
+	if(!isuseraskforclosed)
+	{
+		uv_mutex_lock(&mutex_write_buf);
+		image_pool.push(pImg,ImgWidth,ImgHeight,uiTimeStamp);
+		uv_mutex_unlock(&mutex_write_buf);
+	}
+	
+	return 0;
+
+}
+int AcceptClient::Send(IplImage *image)
+{
+	if(!isuseraskforclosed)
+	{
+		uv_mutex_lock(&mutex_write_buf);
+		
+		iplImage_pool.push(cvCloneImage(image));
+		uv_mutex_unlock(&mutex_write_buf);
+	}
+
 	return 0;
 
 }
@@ -492,7 +485,11 @@ void TcpServer::ClientClosed(int clientid,void *userdata)
 	auto it = theclass->clients_list.find(clientid);
 	if (it != theclass->clients_list.end())
 	{
-		theclass->closedcb(clientid,theclass->closedcb_userdata);
+		if(theclass->closedcb)
+		{
+			theclass->closedcb(clientid,theclass->closedcb_userdata);
+		}
+		
 	}
 	delete it->second;
 	fprintf(stdout,"删除客户端：%d\n",it->first);
@@ -572,7 +569,21 @@ void TcpServer::AcceptConnection(uv_stream_t *server, int status)
 		return;
 	}
 	int clientId = tcpServer->GetAvailaClientID();
-	AcceptClient* client = new AcceptClient(clientId,&tcpServer->loop);//uv_close回调函数中释放
+	AcceptClient* client = NULL;
+	try
+	{
+		client = new AcceptClient(clientId,&tcpServer->loop);//uv_close回调函数中释放
+	}
+	catch (bad_alloc* e)
+	{
+		printf("%s\n",e->what());
+	}
+	catch (exception* e)
+	{
+		printf("%s\n",e->what());
+	}
+	
+	_ASSERTE( _CrtCheckMemory( ) );
 	uv_mutex_lock(&tcpServer->mutex_clients);
 	tcpServer->clients_list.insert(make_pair(clientId,client));
 	uv_mutex_unlock(&tcpServer->mutex_clients);
@@ -722,4 +733,39 @@ int TcpServer::Send(int clientid,UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight, 
 	itfind->second->Send(pImg,ImgWidth,ImgHeight,uiTimeStamp);
 	uv_mutex_unlock(&mutex_clients);
 	return 0;
+}
+
+int TcpServer::Send(int clientid,IplImage *image)
+{
+	uv_mutex_lock(&mutex_clients);
+	auto itfind = clients_list.find(clientid);
+	if (itfind == clients_list.end())
+	{
+		uv_mutex_unlock(&mutex_clients);
+		errmsg = "can't find cliendid ";
+		errmsg += std::to_string((long long)clientid);
+		printf("%s\n",errmsg.c_str());
+		return -1;
+	}
+	itfind->second->Send(image);
+	uv_mutex_unlock(&mutex_clients);
+	return 0;
+}
+
+void TcpServer::CloseClient(int clientid)
+{
+	uv_mutex_lock(&mutex_clients);
+	auto itfind = clients_list.find(clientid);
+	if (itfind == clients_list.end())
+	{
+		uv_mutex_unlock(&mutex_clients);
+		errmsg = "can't find cliendid ";
+		errmsg += std::to_string((long long)clientid);
+		printf("%s\n",errmsg.c_str());
+	
+	}
+	itfind->second->Close();
+	uv_mutex_unlock(&mutex_clients);
+	
+
 }

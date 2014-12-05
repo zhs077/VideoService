@@ -1,19 +1,22 @@
 #pragma once
 #include <libuv/uv.h>
-#include <string>
-#include <cassert>
-#include <iostream>
-#include <map>
-#include <list>
-#include <atomic>
-#include "packet.h"
+#include "platform_config.h"
 #include "ScreenEngine.h"
-using namespace std;
+
 #ifndef BUFFER_SIZE
 #define BUFFER_SIZE (1024*1024)
 #endif
 
+//客户端或服务器关闭的回调函数
+//服务器：当clientid为-1时，表现服务器的关闭事件
+//客户端：clientid无效，永远为-1
+typedef void (*TcpCloseCB)(int clientid, void* userdata);
 
+//TCPServer接收到新客户端回调给用户
+typedef void (*NewConnectCB)(int clientid, void* userdata);
+
+//TCPServer接收到客户端数据回调给用户
+typedef void (*ServerRecvCB)(int clientid, void *clientdata, const  char* buf, void* serverdata);
 class AcceptClient
 {
 public:
@@ -23,6 +26,7 @@ public:
 	void SetRecvCB(ServerRecvCB pfun, void *userdata);//设置接收数据回调函数
 	void SetClosedCB(TcpCloseCB,void *userdata);//设置关闭的回调函数
 	int  Send(const char* data, std::size_t len);
+	int  Send(IplImage *image);
 	int  Send(UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight, UINT uiTimeStamp);
 	void Close(){isuseraskforclosed = true;}
 	bool IsClose(){return isuseraskforclosed;}
@@ -42,14 +46,15 @@ private:
 	uv_mutex_t mutex_write_buf;
 	std::list<uv_write_t*> writereq_list;//可用的uv_write_t
 	uv_mutex_t mutex_writereq;//控制writereq_list_
-	Packet readpacket_;//接受buf数据解析成包
+	//Packet readpacket_;//接受buf数据解析成包
 	ServerRecvCB recvcb;//接收数据回调给用户的函数
 	void *recvcb_userdata;
 	TcpCloseCB closecb;
 	void *closecb_userdata;
 	bool isuseraskforclosed;//用户是否发送命令关闭
 	string errmsg;
-
+	char read_buffer[100];
+	queue<IplImage*>iplImage_pool;
 	
 public:
 	bool	 isplay;//从服务器获取视频流
@@ -60,13 +65,14 @@ public:
 
 
 
+
 private:
 	bool init();
 	void closeinl();
 private:
 	static void AllocBufferForRecv(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf);
 	static void AfterRecv(uv_stream_t *client, ssize_t nread, const uv_buf_t* buf);
-	static void GetPacket( const NetPacket& packethead, const  char* packetdata, void* userdata );
+	//static void GetPacket( const NetPacket& packethead, const  char* packetdata, void* userdata );
 	static void PrepareCB( uv_prepare_t* handle );
 	static void AfterSend( uv_write_t *req, int status);
 	static void AfterClientClose( uv_handle_t *handle );
@@ -86,11 +92,13 @@ public:
 	};
 	int  Send(int clientid, const char* data, std::size_t len);
 	int  Send(int clientid,UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight, UINT uiTimeStamp);
+	int  Send(int clientid,IplImage *image);
 	void SetNewConnectCB(NewConnectCB,void *userdata);
 	void SetClosedCB(TcpCloseCB,void *userdata );
 	void SetRecvCB(int clientid,ServerRecvCB cb, void *userdata);//设置接收回调函数，每个客户端各有一个
 	void Close(){isuseraskforclosed = true;}//用户关闭服务端 
 	bool IsClose(){return isuseraskforclosed;}
+	void CloseClient(int clientid);
 private:
 	bool init();
 	bool bind(const char* ip, int port);
@@ -132,7 +140,7 @@ private:
 	int serverport;//连接的端口号
 	int startstatus;//连接状态
 	map<int,AcceptClient*> clients_list;//子客户端链接
-	Packet readpacket_;//接受buf数据解析成包
+	//Packet readpacket_;//接受buf数据解析成包
 	NewConnectCB newconcb;//回调函数
 	void *newconcb_userdata;
 private:

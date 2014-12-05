@@ -8,6 +8,7 @@
 #include <vector>
 #include <map>
 #include <list>
+#include <queue>
 #include<cassert>
 #include <utility>
 #include<string>

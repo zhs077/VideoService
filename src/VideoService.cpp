@@ -3,6 +3,7 @@
 #include "platform_config.h"
 #include "C7Platform.h"
 #include "minidump.h"
+#include "ImageProcess.h"
 #define MAX_NUM_RESOURCE 100
 #define MAX_FRAME_LEN	1024*1024 //最大帧大小
 TcpServer server;
@@ -13,9 +14,13 @@ int __stdcall DecodeVideoCallBack(UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight,
 {
 
 	const char *puid = (const char *)pContext;
-	
 	assert(puid);
 	if (puid == NULL)
+	{
+		return 0;
+	}
+	IplImage *img = YUV420_To_IplImage_Opencv(pImg[0], ImgWidth, ImgHeight);
+	if (img == NULL)
 	{
 		return 0;
 	}
@@ -23,13 +28,16 @@ int __stdcall DecodeVideoCallBack(UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight,
 	uv_mutex_lock(&server.mutex_puid_client);
 	int num = puid_client_map.count(puid);
 	auto it = puid_client_map.find(puid);
+
 	for (int i=0; i<num;i++)
 	{
-		server.Send(it->second,pImg,ImgWidth,ImgHeight,uiTimeStamp);
+		//server.Send(it->second,pImg,ImgWidth,ImgHeight,uiTimeStamp);
+		server.Send(it->second,img);
 		++it;
 
 	}
 	uv_mutex_unlock(&server.mutex_puid_client);
+	cvReleaseImage(&img);
 	//delete client;
 	//client->Close();
 	
@@ -73,7 +81,7 @@ void ThreadFun(void *arg)
 
 	}
 	hVARender =VADR_Init(100);
-	rv = VADR_SetVideoDecodeCallBack(hVARender, DecodeVideoCallBack, FRAMEFMT_YUV420,(void*)client->resource_puid.c_str());
+	rv = VADR_SetVideoDecodeCallBack(hVARender, DecodeVideoCallBack, FRAMEFMT_YUV420,(void*)puid_count->first.c_str());
 	if (rv != NRCAP_SUCCESS)
 	{
 		//LOG4CPLUS_ERROR(logger," Error: VADR_SetVideoDecodeCallBack ERROR_CODE:"<<rv);
@@ -149,14 +157,23 @@ void ThreadFun(void *arg)
 	//VADR_Close(hVARender);
 	//C7_Close(C7Platform::session);
 	//C7_Terminate();
-	client->Close();
-	
+	uv_mutex_lock(&server.mutex_puid_client);
+	int num = server.puid_client_map.count(puid_count->first);
+	auto it2 = server.puid_client_map.find(puid_count->first);
 
+	for (int i=0; i<num;i++)
+	{
+		
+		server.CloseClient(it2->second);
+		++it2;
+	}
+	uv_mutex_unlock(&server.mutex_puid_client);
+	
 
 }
 void ReadCB(int cliendid, void *clientdata, const  char* buf,void *serverdata)
 {
-
+	
 	TcpServer *server = (TcpServer*)serverdata;
 	assert(server);
 	AcceptClient *client = (AcceptClient *)clientdata;
@@ -188,7 +205,7 @@ void ReadCB(int cliendid, void *clientdata, const  char* buf,void *serverdata)
 	server->puid_client_map.insert(make_pair(buf,cliendid));
 	uv_mutex_unlock(&server->mutex_puid_client);
 	
-
+	
 	/*
 	AcceptClient* client = (AcceptClient*)userdata;
 	assert(client);
@@ -238,7 +255,7 @@ int main()
 	//Sleep(12000);
 	while(true) 
 	{
-		Sleep(10);
+		Sleep(10000);
 	}
 	server.Close();
 	C7Platform::UnInit();

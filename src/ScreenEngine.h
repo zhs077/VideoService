@@ -24,16 +24,22 @@ public:
 	UINT uiTimeStamp;
 };
 
-class ImagePool {
+class ImagePool 
+{
 public:
 	ImagePool() {
-		InitializeCriticalSection(&m_cs);
+		//InitializeCriticalSection(&m_cs);
+	}
+	~ImagePool()
+	{
+		//DeleteCriticalSection(&m_cs);
+
 	}
 public:
 	void push(UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight, UINT uiTimeStamp);
 	auto_ptr<ReceivedImage> pop()
 	{
-		EnterCriticalSection(&m_cs);
+		//EnterCriticalSection(&m_cs);
 		int szSize = m_imageQueue.size();
 		//int dropSize=szSize / 5;
 		int dropSize=0;
@@ -52,7 +58,7 @@ public:
 		//}
 		result = m_imageQueue.front();
 		m_imageQueue.pop();
-		LeaveCriticalSection(&m_cs);
+		//LeaveCriticalSection(&m_cs);
 		return auto_ptr<ReceivedImage>(result);
 	}
 
