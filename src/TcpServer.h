@@ -2,36 +2,24 @@
 #define TCP_SERVER_H_
 
 #include <libuv/uv.h>
+#include "TCPCommon.h"
 #include "platform_config.h"
 #include "ScreenEngine.h"
 #include "LogFile.h"
-#ifndef BUFFER_SIZE
-#define BUFFER_SIZE (1024*1024)
-#endif
-
-//客户端或服务器关闭的回调函数
-//服务器：当clientid为-1时，表现服务器的关闭事件
-//客户端：clientid无效，永远为-1
-typedef void (*TcpCloseCB)(int clientid, void* userdata);
-//TCPServer接收到新客户端回调给用户
-typedef void (*NewConnectCB)(int clientid, void* userdata);
-
-//TCPServer接收到客户端数据回调给用户
-typedef void (*ServerRecvCB)(int clientid, void *clientdata, const  char* buf, void* serverdata);
 class AcceptClient
 {
 public:
 	AcceptClient(int clientId,uv_loop_t*loop);
 	virtual ~AcceptClient();
-	bool AcceptByServer( uv_tcp_t *server );
+	bool AcceptByServer(uv_tcp_t *server);
 	void SetRecvCB(ServerRecvCB pfun, void *userdata);//设置接收数据回调函数
 	void SetClosedCB(TcpCloseCB,void *userdata);//设置关闭的回调函数
-	int  Send(const char* data, std::size_t len);
+	int  Send(const char* data, std::size_t len);//发送字符串
 	int  Send(IplImage *image);
-	int  Send(const vector<uchar> & msg);
+	int  Send(const vector<uchar> & msg);//将消息放入队列
 	int  Send(UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight, UINT uiTimeStamp);
-	void Close(){isuseraskforclosed = true;}
-	bool IsClose(){return isuseraskforclosed;}
+	inline void Close(){isuseraskforclosed = true;}
+	inline bool IsClose(){return isuseraskforclosed;}
 	const char* GetLastErrMsg() const 
 	{
 		return errmsg.c_str();
@@ -76,11 +64,11 @@ private:
 
 
 };
-class TcpServer
+class TCPServer
 {
 public:
-	TcpServer(void);
-	~TcpServer(void);
+	TCPServer(void);
+	~TCPServer(void);
 
 	bool Start(const char *ip, int port);
 	bool StartLog(const string& filePath);
@@ -97,8 +85,8 @@ public:
 	void SetNewConnectCB(NewConnectCB,void *userdata);
 	void SetClosedCB(TcpCloseCB,void *userdata );
 	void SetRecvCB(int clientid,ServerRecvCB cb, void *userdata);//设置接收回调函数，每个客户端各有一个
-	void Close(){isuseraskforclosed = true;}//用户关闭服务端 
-	bool IsClose(){return isuseraskforclosed;}
+	inline void Close(){isuseraskforclosed = true;}//用户关闭服务端 
+	inline bool IsClose(){return isuseraskforclosed;}
 	void CloseClient(int clientid);
 private:
 	bool init();
@@ -107,11 +95,11 @@ private:
 	bool run(int status = UV_RUN_DEFAULT);
 	void closeinl();//内部真正的清理函数
 private:
-	static void PrepareCB( uv_prepare_t* handle );
-	static void CheckCB( uv_check_t* handle );
+	static void PrepareCB(uv_prepare_t* handle);
+	static void CheckCB(uv_check_t* handle);
 	static void IdleCB(uv_idle_t *handle);
 	static void AcceptConnection(uv_stream_t *server, int status);
-	static void StartThread( void* arg );
+	static void StartThread(void* arg);
 	static void AfterServerClose(uv_handle_t *handle);
 	static void ClientClosed(int clientid,void *userdata);//AcceptClient关闭后回调给TCPServer
 	int GetAvailaClientID()const;
@@ -139,7 +127,7 @@ private:
 	bool isuseraskforclosed;//用户是否发送命令关闭
 	string serverip;//连接的IP
 	int serverport;//连接的端口号
-	int startstatus;//连接状态
+	int startstatus;//服务端状态
 	map<int,AcceptClient*> clients_list;//子客户端链接
 	NewConnectCB newconcb;//回调函数
 	void *newconcb_userdata;
@@ -150,7 +138,6 @@ private:
 	void *closedcb_userdata;
 
 public:
-	static LogFile log_file;//日志
 	multimap<string,int> puid_client_map;//播放的视频对应的客户端ID、索引
 	uv_mutex_t mutex_puid_client;
 	map<string,atomic<int> > puid_count_map;//播放视频对应的次数

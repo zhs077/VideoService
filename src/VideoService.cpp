@@ -38,7 +38,7 @@
 #include "configlib.h"
 #define MAX_NUM_RESOURCE 100
 #define MAX_FRAME_LEN	1024*1024 //最大帧大小
-TcpServer server;
+TCPServer server;
 Logger logger;
 int index = 0;
 
@@ -253,9 +253,11 @@ void ThreadFun(void *arg)
 
 
 }
+//客户端发送类似的字符串："12324,1"代表哪个ID第几个索引视频
 void ReadCB(int cliendid, void *clientdata, const  char* buf,void *serverdata)
 {
-	TcpServer *server = (TcpServer*)serverdata;
+	
+	TCPServer *server = (TCPServer*)serverdata;
 	assert(server);
 	AcceptClient *client = (AcceptClient *)clientdata;
 	string tmp = buf;
@@ -275,7 +277,7 @@ void ReadCB(int cliendid, void *clientdata, const  char* buf,void *serverdata)
 
 	uv_mutex_lock(&server->mutex_puid_client);
 	int num = server->puid_client_map.count(tmp);
-	if (num == 0) //无该puid视频创建线程获取视频
+	if (num == 0) //无该puid视频则创建线程获取该视频
 	{
 		client->recv_msg = tmp;
 		client->resource_puid = id;
@@ -293,9 +295,6 @@ void ReadCB(int cliendid, void *clientdata, const  char* buf,void *serverdata)
 		server->puid_client_map.insert(make_pair(tmp,cliendid));
 		uv_mutex_unlock(&server->mutex_puid_client);
 	}
-	
-	
-	
 	/*
 	AcceptClient* client = (AcceptClient*)userdata;
 	assert(client);
@@ -317,7 +316,7 @@ void ReadCB(int cliendid, void *clientdata, const  char* buf,void *serverdata)
 }
 void NewConnect(int clientid, void* userdata)
 {
-	TcpServer * server = (TcpServer*)userdata;
+	TCPServer * server = (TCPServer*)userdata;
 	LOG_INFO("new connect:%d\n",clientid);
 	server->SetRecvCB(clientid,ReadCB,server);
 	
@@ -334,38 +333,41 @@ bool TcpServerStart(const char *ip, int port)
 	return server.Start(ip,port);
 
 }
-int main()
-{
-	MiniDump::InitMinDump();
-	string current_path;
-	string log_path;//log4cplus 配置文件路径
-	string ini_file_path;//INI配置文件
-	current_path = get_application_path(current_path);
-	log_path = current_path + LOG4CPLUS_CONFIG_FILE;
-	ini_file_path = current_path + RUNTIME_CONFIG_FILE;
-	LogFile::SetLogFilePath(log_path);
-	LOG_INFO( "*********************************************************");
-	LOG_INFO("VideoService initialize...");
-	char server_ip[100]={0};
-	int server_port=0;
-	config_read_string(ini_file_path.c_str(),"General","ServerIp",server_ip,"");
-	config_read_integer(ini_file_path.c_str(),"General","ServerPort",&server_port,0);
-	if(!TcpServerStart(server_ip,server_port))
-	{
-		LOG_ERROR("TcpServerStart Fail");
-		return -1;
-	}
-	C7Platform c7Platform;
-	C7Platform::Init(current_path);
-	LOG_INFO( "*********************************************************");
-	LOG_INFO("TCPService initialize success!");
-	LOG_INFO("TCPService address ---> %s:%d",server_ip,server_port);
-
-	while(true) 
-	{
-		Sleep_i(10000);
-	}
-	server.Close();
-	C7Platform::UnInit();
-	return 0;
-}
+//
+//int main()
+//{
+//	
+//	MiniDump::InitMinDump();
+//	string current_path;
+//	string log_path;//log4cplus 配置文件路径
+//	string ini_file_path;//INI配置文件
+//	current_path = get_application_path(current_path);
+//	log_path = current_path + LOG4CPLUS_CONFIG_FILE;
+//	ini_file_path = current_path + RUNTIME_CONFIG_FILE;
+//	LogFile::SetLogFilePath(log_path);
+//	LOG_INFO( "*********************************************************");
+//	LOG_INFO("VideoService initialize...");
+//	char server_ip[100]={0};
+//	int server_port=0;
+//	config_read_string(ini_file_path.c_str(),"General","ServerIp",server_ip,"");
+//	config_read_integer(ini_file_path.c_str(),"General","ServerPort",&server_port,0);
+//	if(!TcpServerStart(server_ip,server_port))
+//	{
+//		LOG_ERROR("TcpServerStart Fail");
+//		return -1;
+//	}
+//	C7Platform c7Platform;
+//	C7Platform::Init(current_path);
+//	LOG_INFO( "*********************************************************");
+//	LOG_INFO("TCPService initialize success!");
+//	LOG_INFO("TCPService address ---> %s:%d",server_ip,server_port);
+//
+//	while(true) 
+//	{
+//		Sleep_i(10000);
+//	}
+//	server.Close();
+//	C7Platform::UnInit();
+//	
+//	return 0;
+//}

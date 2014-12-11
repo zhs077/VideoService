@@ -1,13 +1,4 @@
 #include "TcpServer.h"
-LogFile TcpServer::log_file ;
-string GetUVError(int retcode)
-{
-	string err;
-	err = uv_err_name(retcode);
-	err +=":";
-	err += uv_strerror(retcode);
-	return err;
-}
 
 AcceptClient::AcceptClient(int clientId,uv_loop_t*loop)
 {
@@ -61,13 +52,6 @@ void AcceptClient::closeinl()
 	if (isclosed)
 	{
 		return;
-	}
-	if(threadId !=0)
-	{
-	//	isplay = false;
-	//	uv_thread_join(&threadId);
-	//	threadId = 0;
-
 	}
 	
 	uv_mutex_lock(&mutex_writereq);
@@ -278,7 +262,6 @@ void AcceptClient::AfterRecv(uv_stream_t *handle, ssize_t nread, const uv_buf_t*
 			theclass->recvcb(theclass->client_id,theclass,theclass->read_buffer,theclass->recvcb_userdata);
 		}
 		
-		//theclass->readpacket_.recvdata((const unsigned char*)buf->base,nread);//新方式-解析完包后再回调数据
 	}
 }
 bool AcceptClient::AcceptByServer( uv_tcp_t* server )
@@ -306,6 +289,12 @@ void AcceptClient::SetClosedCB(TcpCloseCB cb,void *userdata)
 }
 int AcceptClient::Send(const char* data, std::size_t len)
 {
+	if (!data || len ==0)
+	{
+		errmsg= "send data is null or len less than zero.";
+		fprintf(stdout,"%s\n",errmsg.c_str());
+		return 1;
+	}
 	uv_write_t *req = NULL;
 	req = (uv_write_t*)malloc(sizeof(*req));
 	write_buf.base = (char*)data;
@@ -353,7 +342,7 @@ int AcceptClient::Send(const vector<uchar> & msg)
 	return 0;
 }
 
-TcpServer::TcpServer(void)
+TCPServer::TCPServer(void)
 {
 	newconcb = NULL;
 	newconcb_userdata = NULL;
@@ -392,7 +381,7 @@ TcpServer::TcpServer(void)
 		LOG_ERROR("File:%s--Line:%d: uv_mutex_init mutex_puid_count error: %s",__FILE__,__LINE__,errmsg.c_str());
 	}
 }
-TcpServer::~TcpServer(void)
+TCPServer::~TCPServer(void)
 {
 	Close();
 	uv_mutex_destroy(&mutex_clients);
@@ -401,7 +390,7 @@ TcpServer::~TcpServer(void)
 	uv_loop_close(&loop);
 
 }
-void TcpServer::closeinl()
+void TCPServer::closeinl()
 {
 	if (isclosed)
 	{
@@ -432,9 +421,9 @@ void TcpServer::closeinl()
 	}
 	printf("close server\n");
 }
-void TcpServer::AfterServerClose(uv_handle_t *handle)
+void TCPServer::AfterServerClose(uv_handle_t *handle)
 {
-	TcpServer *theclass = (TcpServer*)handle->data;
+	TCPServer *theclass = (TCPServer*)handle->data;
 	if (handle == (uv_handle_t *)&theclass->server_handle)
 	{
 		handle->data = 0;//赋值0，用于判断是否调用过
@@ -466,9 +455,9 @@ void TcpServer::AfterServerClose(uv_handle_t *handle)
 	}
 
 }
-void TcpServer::ClientClosed(int clientid,void *userdata)
+void TCPServer::ClientClosed(int clientid,void *userdata)
 {
-	TcpServer *theclass = (TcpServer*)userdata;
+	TCPServer *theclass = (TCPServer*)userdata;
 	//删除clientId对应的puid
 	string puid="";
 	uv_mutex_lock(&theclass->mutex_puid_client);
@@ -518,20 +507,20 @@ void TcpServer::ClientClosed(int clientid,void *userdata)
 
 
 }
-void TcpServer::CheckCB( uv_check_t* handle )
+void TCPServer::CheckCB( uv_check_t* handle )
 {
 	//TcpServer *theclass = (TcpServer*)handle->data;
 	//check阶段暂时不处理任何事情
 }
 
-void TcpServer::IdleCB(uv_idle_t *handle)
+void TCPServer::IdleCB(uv_idle_t *handle)
 {
 	//TcpServer *theclass = (TcpServer*)handle->data;
 	//Idle阶段暂时不处理任何事情
 }
 
 
-bool TcpServer::init()
+bool TCPServer::init()
 {
 	if (!isclosed) 
 	{
@@ -567,10 +556,10 @@ bool TcpServer::init()
 
 }
 
-void TcpServer::PrepareCB( uv_prepare_t* handle )
+void TCPServer::PrepareCB( uv_prepare_t* handle )
 {
 	/////////////////////////prepare阶段检测用户是否发送关闭命令
-	TcpServer *theclass = (TcpServer*)handle->data;
+	TCPServer *theclass = (TCPServer*)handle->data;
 	if (theclass->isuseraskforclosed)
 	{
 		theclass->closeinl();
@@ -579,13 +568,13 @@ void TcpServer::PrepareCB( uv_prepare_t* handle )
 	//检测是否关闭
 
 }
-void TcpServer::AcceptConnection(uv_stream_t *server, int status)
+void TCPServer::AcceptConnection(uv_stream_t *server, int status)
 {
 	if (!server->data)
 	{
 		return;
 	}
-	TcpServer *tcpServer =(TcpServer*)server->data;
+	TCPServer *tcpServer =(TCPServer*)server->data;
 	if (status)
 	{
 		printf("%s\n",uv_strerror(status));
@@ -616,13 +605,13 @@ void TcpServer::AcceptConnection(uv_stream_t *server, int status)
 
 
 }
-void TcpServer::SetNewConnectCB(NewConnectCB cb,void *userdata)
+void TCPServer::SetNewConnectCB(NewConnectCB cb,void *userdata)
 {
 	newconcb = cb;
 	newconcb_userdata = userdata;
 
 }
-void TcpServer::SetClosedCB(TcpCloseCB cb,void *userdata )
+void TCPServer::SetClosedCB(TcpCloseCB cb,void *userdata )
 {
 	closedcb = cb;
 	closedcb_userdata = userdata;
@@ -630,7 +619,7 @@ void TcpServer::SetClosedCB(TcpCloseCB cb,void *userdata )
 }
 
 //服务器-接收数据回调函数
-void TcpServer::SetRecvCB(int clientid, ServerRecvCB cb, void *userdata)
+void TCPServer::SetRecvCB(int clientid, ServerRecvCB cb, void *userdata)
 {
 	uv_mutex_lock(&mutex_clients);
 	auto itfind = clients_list.find(clientid);
@@ -641,12 +630,12 @@ void TcpServer::SetRecvCB(int clientid, ServerRecvCB cb, void *userdata)
 	uv_mutex_unlock(&mutex_clients);
 }
 
-int TcpServer::GetAvailaClientID() const
+int TCPServer::GetAvailaClientID() const
 {
 	static int s_id = 0;
 	return ++s_id;
 }
-bool TcpServer::bind(const char* ip, int port)
+bool TCPServer::bind(const char* ip, int port)
 {
 	struct sockaddr_in bind_addr;
 	int r = uv_ip4_addr(ip,port,&bind_addr);
@@ -658,7 +647,7 @@ bool TcpServer::bind(const char* ip, int port)
 	return true;
 
 }
-bool TcpServer::listen(int backlog)
+bool TCPServer::listen(int backlog)
 {
 	int r = uv_listen((uv_stream_t*)&server_handle,backlog,AcceptConnection);
 	assert(r == 0);
@@ -666,24 +655,24 @@ bool TcpServer::listen(int backlog)
 
 }
 
-void TcpServer::StartThread( void* arg )
+void TCPServer::StartThread( void* arg )
 {
-	TcpServer *theclass = (TcpServer*)arg;
+	TCPServer *theclass = (TCPServer*)arg;
 	theclass->startstatus = START_FINISH;
 	theclass->run();
 }
-bool TcpServer::run(int status)
+bool TCPServer::run(int status)
 {
 	printf("****************Server Runing***************.\n");
 	int r = uv_run(&loop,(uv_run_mode)status);
 	assert(r == 0);
 	return true;
 }
-bool TcpServer::StartLog(const string& file_path)
+bool TCPServer::StartLog(const string& file_path)
 {
-	return log_file.SetLogFilePath(file_path);
+	return LogFile::SetLogFilePath(file_path);
 }
-bool TcpServer::Start(const char *ip, int port)
+bool TCPServer::Start(const char *ip, int port)
 {
 	serverport = port;
 	serverip = ip;
@@ -719,7 +708,7 @@ bool TcpServer::Start(const char *ip, int port)
 
 }
 
-int TcpServer::Send(int clientid, const char* data, std::size_t len)
+int TCPServer::Send(int clientid, const char* data, std::size_t len)
 {
 	uv_mutex_lock(&mutex_clients);
 	auto itfind = clients_list.find(clientid);
@@ -732,7 +721,7 @@ int TcpServer::Send(int clientid, const char* data, std::size_t len)
 	uv_mutex_unlock(&mutex_clients);
 	return 0;
 }
-int TcpServer::Send(int clientid,UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight, UINT uiTimeStamp)
+int TCPServer::Send(int clientid,UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight, UINT uiTimeStamp)
 {
 	uv_mutex_lock(&mutex_clients);
 	auto itfind = clients_list.find(clientid);
@@ -750,7 +739,7 @@ int TcpServer::Send(int clientid,UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight, 
 	return 0;
 }
 
-int TcpServer::Send(int clientid,IplImage *image)
+int TCPServer::Send(int clientid,IplImage *image)
 {
 	uv_mutex_lock(&mutex_clients);
 	auto itfind = clients_list.find(clientid);
@@ -768,7 +757,7 @@ int TcpServer::Send(int clientid,IplImage *image)
 	return 0;
 }
 
-int TcpServer::Send(int clientid,const vector<uchar>&msg)
+int TCPServer::Send(int clientid,const vector<uchar>&msg)
 {
 	uv_mutex_lock(&mutex_clients);
 	auto itfind = clients_list.find(clientid);
@@ -786,7 +775,7 @@ int TcpServer::Send(int clientid,const vector<uchar>&msg)
 	return 0;
 }
 
-void TcpServer::CloseClient(int clientid)
+void TCPServer::CloseClient(int clientid)
 {
 	uv_mutex_lock(&mutex_clients);
 	auto itfind = clients_list.find(clientid);
@@ -796,14 +785,13 @@ void TcpServer::CloseClient(int clientid)
 		errmsg = "can't find cliendid ";
 		errmsg += std::to_string((long long)clientid);
 		printf("%s\n",errmsg.c_str());
-	//	LOG_ERROR(errmsg,__FILE__,__LINE__);
 	
 	}
 	itfind->second->Close();
 	uv_mutex_unlock(&mutex_clients);
 
 }
-bool TcpServer::SetNoDelay(bool enable)
+bool TCPServer::SetNoDelay(bool enable)
 {
 	int r = uv_tcp_nodelay(&server_handle,enable);
 	if (r)
