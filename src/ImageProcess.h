@@ -4,6 +4,7 @@
 #include "platform_config.h"
 
 
+
 IplImage* YUV420_To_IplImage_Opencv(unsigned char* pYUV420, int width, int height)
 {
 	if (!pYUV420)

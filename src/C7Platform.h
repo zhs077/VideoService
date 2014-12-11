@@ -9,7 +9,7 @@ typedef struct ResourceInfo
 	string szPUID;
 	string szName;
 	string szType;
-	int usable;
+	int usable;	
 	int index;
 
 

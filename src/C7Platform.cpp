@@ -50,7 +50,6 @@ bool C7Platform::Init(const string& current_path)
 		exit(-1);
 	}
 	int nPlatformType;
-	C7_STR szPUID;
 	C7_STR szName;
 	C7_STR szType;
 	int nUsable = 0;

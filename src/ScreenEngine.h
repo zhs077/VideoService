@@ -67,6 +67,6 @@ public:
 	bool isEmpty() { return m_imageQueue.empty(); }
 private:
 	queue<ReceivedImage*> m_imageQueue;
-	CRITICAL_SECTION m_cs;
+	//CRITICAL_SECTION m_cs;
 };
 

@@ -80,7 +80,10 @@ int utf8_to_gb2312(const char* sIn,char* sOut,size_t size)
 	return 1;
 
 }
-
+void Sleep_i(int mseconds)
+{
+	usleep(mseconds * 1000);
+}
 #elif defined (OS_WIN32)
 string get_application_path(string &str)
 {
@@ -95,6 +98,10 @@ string get_application_path(string &str)
 	str = ExtractFilePath(str);
 
 	return str;
+}
+void Sleep_i(int mseconds)
+{
+	Sleep(mseconds);
 }
 
 #endif

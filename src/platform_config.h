@@ -127,6 +127,7 @@ using namespace cv;
 /**************** 公共函数****************/
 string get_application_path(string &str);
 string ExtractFilePath(string filename);
+void Sleep_i(int mseconds);
 
 
 typedef  uchar UCHAR;

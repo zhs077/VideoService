@@ -1,8 +1,10 @@
-#pragma once
+#ifndef TCP_SERVER_H_
+#define TCP_SERVER_H_
+
 #include <libuv/uv.h>
 #include "platform_config.h"
 #include "ScreenEngine.h"
-
+#include "LogFile.h"
 #ifndef BUFFER_SIZE
 #define BUFFER_SIZE (1024*1024)
 #endif
@@ -11,7 +13,6 @@
 //服务器：当clientid为-1时，表现服务器的关闭事件
 //客户端：clientid无效，永远为-1
 typedef void (*TcpCloseCB)(int clientid, void* userdata);
-
 //TCPServer接收到新客户端回调给用户
 typedef void (*NewConnectCB)(int clientid, void* userdata);
 
@@ -27,6 +28,7 @@ public:
 	void SetClosedCB(TcpCloseCB,void *userdata);//设置关闭的回调函数
 	int  Send(const char* data, std::size_t len);
 	int  Send(IplImage *image);
+	int  Send(const vector<uchar> & msg);
 	int  Send(UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight, UINT uiTimeStamp);
 	void Close(){isuseraskforclosed = true;}
 	bool IsClose(){return isuseraskforclosed;}
@@ -46,7 +48,6 @@ private:
 	uv_mutex_t mutex_write_buf;
 	std::list<uv_write_t*> writereq_list;//可用的uv_write_t
 	uv_mutex_t mutex_writereq;//控制writereq_list_
-	//Packet readpacket_;//接受buf数据解析成包
 	ServerRecvCB recvcb;//接收数据回调给用户的函数
 	void *recvcb_userdata;
 	TcpCloseCB closecb;
@@ -55,29 +56,25 @@ private:
 	string errmsg;
 	char read_buffer[100];
 	queue<IplImage*>iplImage_pool;
-	
+	queue<vector<uchar> >send_msg_pool;
+
 public:
-	bool	 isplay;//从服务器获取视频流
 	ImagePool image_pool;//图片池
+	string recv_msg; //resource_puid +  resource_index
 	string resource_puid;//要获取的资源PUID
 	int resource_index;//资源索引
 	uv_thread_t threadId;//接收视频的线程ID
-
-
-
-
 private:
 	bool init();
 	void closeinl();
 private:
 	static void AllocBufferForRecv(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf);
 	static void AfterRecv(uv_stream_t *client, ssize_t nread, const uv_buf_t* buf);
-	//static void GetPacket( const NetPacket& packethead, const  char* packetdata, void* userdata );
 	static void PrepareCB( uv_prepare_t* handle );
 	static void AfterSend( uv_write_t *req, int status);
 	static void AfterClientClose( uv_handle_t *handle );
 
-	
+
 };
 class TcpServer
 {
@@ -86,6 +83,7 @@ public:
 	~TcpServer(void);
 
 	bool Start(const char *ip, int port);
+	bool StartLog(const string& filePath);
 	const char* GetLastErrMsg() const 
 	{
 		return errmsg.c_str();
@@ -93,6 +91,9 @@ public:
 	int  Send(int clientid, const char* data, std::size_t len);
 	int  Send(int clientid,UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight, UINT uiTimeStamp);
 	int  Send(int clientid,IplImage *image);
+	int  Send(int clientid,const vector<uchar>&msg);
+	//是否启用Nagle算法
+	bool SetNoDelay(bool enable);
 	void SetNewConnectCB(NewConnectCB,void *userdata);
 	void SetClosedCB(TcpCloseCB,void *userdata );
 	void SetRecvCB(int clientid,ServerRecvCB cb, void *userdata);//设置接收回调函数，每个客户端各有一个
@@ -140,23 +141,24 @@ private:
 	int serverport;//连接的端口号
 	int startstatus;//连接状态
 	map<int,AcceptClient*> clients_list;//子客户端链接
-	//Packet readpacket_;//接受buf数据解析成包
 	NewConnectCB newconcb;//回调函数
 	void *newconcb_userdata;
+
 private:
 	ServerRecvCB recvcb;//接收数据回调给用户的函数
 	TcpCloseCB closedcb;//关闭后回调给TCPServer
 	void *closedcb_userdata;
 
 public:
-	
-	multimap<string,int> puid_client_map;//播放的视频对应的客户端ID
+	static LogFile log_file;//日志
+	multimap<string,int> puid_client_map;//播放的视频对应的客户端ID、索引
 	uv_mutex_t mutex_puid_client;
 	map<string,atomic<int> > puid_count_map;//播放视频对应的次数
 	map<string,uv_thread_t> puid_thread_map;
 	uv_mutex_t mutex_puid_count;
-	
+
 
 
 };
 
+#endif
