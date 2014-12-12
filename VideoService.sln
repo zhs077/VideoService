@@ -13,6 +13,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libconfig", "deps\libconfig
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libuv", "deps\libuv\libuv.vcxproj", "{33066374-88CB-CB8D-15DA-61032886329A}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VideoClient", "..\VideoClient\VideoClient\VideoClient.vcxproj", "{273774F6-4EA0-4D8A-ACAB-2650DE347699}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_Unicode|Win32 = Debug_Unicode|Win32
@@ -82,6 +84,18 @@ Global
 		{33066374-88CB-CB8D-15DA-61032886329A}.Release|Win32.Build.0 = Release|Win32
 		{33066374-88CB-CB8D-15DA-61032886329A}.Release|x64.ActiveCfg = Release|x64
 		{33066374-88CB-CB8D-15DA-61032886329A}.Release|x64.Build.0 = Release|x64
+		{273774F6-4EA0-4D8A-ACAB-2650DE347699}.Debug_Unicode|Win32.ActiveCfg = Debug|Win32
+		{273774F6-4EA0-4D8A-ACAB-2650DE347699}.Debug_Unicode|Win32.Build.0 = Debug|Win32
+		{273774F6-4EA0-4D8A-ACAB-2650DE347699}.Debug_Unicode|x64.ActiveCfg = Debug|Win32
+		{273774F6-4EA0-4D8A-ACAB-2650DE347699}.Debug|Win32.ActiveCfg = Debug|Win32
+		{273774F6-4EA0-4D8A-ACAB-2650DE347699}.Debug|Win32.Build.0 = Debug|Win32
+		{273774F6-4EA0-4D8A-ACAB-2650DE347699}.Debug|x64.ActiveCfg = Debug|Win32
+		{273774F6-4EA0-4D8A-ACAB-2650DE347699}.Release_Unicode|Win32.ActiveCfg = Release|Win32
+		{273774F6-4EA0-4D8A-ACAB-2650DE347699}.Release_Unicode|Win32.Build.0 = Release|Win32
+		{273774F6-4EA0-4D8A-ACAB-2650DE347699}.Release_Unicode|x64.ActiveCfg = Release|Win32
+		{273774F6-4EA0-4D8A-ACAB-2650DE347699}.Release|Win32.ActiveCfg = Release|Win32
+		{273774F6-4EA0-4D8A-ACAB-2650DE347699}.Release|Win32.Build.0 = Release|Win32
+		{273774F6-4EA0-4D8A-ACAB-2650DE347699}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -91,8 +105,5 @@ Global
 		{59D097AC-F229-4872-8AB0-4595D07F7160} = {72F3535F-06ED-4EA8-A026-4E59ED8F41F3}
 		{29DACBBE-C7AA-4817-AA69-5DD99BF5DE72} = {72F3535F-06ED-4EA8-A026-4E59ED8F41F3}
 		{33066374-88CB-CB8D-15DA-61032886329A} = {59D097AC-F229-4872-8AB0-4595D07F7160}
-	EndGlobalSection
-	GlobalSection(Performance) = preSolution
-		HasPerformanceSessions = true
 	EndGlobalSection
 EndGlobal
