@@ -12,27 +12,27 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\C7Platform.cpp" />
-    <ClCompile Include="src\LogFile.cpp" />
-    <ClCompile Include="src\plateform_public.cpp" />
-    <ClCompile Include="src\ScreenEngine.cpp" />
-    <ClCompile Include="src\TCPClient.cpp" />
-    <ClCompile Include="src\TcpServer.cpp" />
+    <ClCompile Include="src\common\LogFile.cpp" />
+    <ClCompile Include="src\common\plateform_public.cpp" />
+    <ClCompile Include="src\common\ScreenEngine.cpp" />
+    <ClCompile Include="src\common\TCPClient.cpp" />
+    <ClCompile Include="src\common\TcpServer.cpp" />
     <ClCompile Include="src\test_client.cpp" />
     <ClCompile Include="src\VideoCalculator.cpp" />
     <ClCompile Include="src\VideoService.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\C7Platform.h" />
+    <ClInclude Include="src\common\LogFile.h" />
+    <ClInclude Include="src\common\platform_config.h" />
+    <ClInclude Include="src\common\ScreenEngine.h" />
+    <ClInclude Include="src\common\TCPClient.h" />
+    <ClInclude Include="src\common\TCPCommon.h" />
+    <ClInclude Include="src\common\TcpServer.h" />
     <ClInclude Include="src\cvOperations.hpp" />
     <ClInclude Include="src\ErrorCode.h" />
     <ClInclude Include="src\ImageProcess.h" />
-    <ClInclude Include="src\LogFile.h" />
     <ClInclude Include="src\minidump.h" />
-    <ClInclude Include="src\platform_config.h" />
-    <ClInclude Include="src\ScreenEngine.h" />
-    <ClInclude Include="src\TCPClient.h" />
-    <ClInclude Include="src\TCPCommon.h" />
-    <ClInclude Include="src\TcpServer.h" />
     <ClInclude Include="src\VideoCalculator.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -80,7 +80,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <AdditionalIncludeDirectories>C:\ProgramData\NVIDIA Corporation\CUDA Samples\v6.5\common\inc;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include;E:\code\C++\openCV\VideoService - 副本\install\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\ProgramData\NVIDIA Corporation\CUDA Samples\v6.5\common\inc;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include;.\src\common;.\install\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
     </ClCompile>
     <Link>
@@ -101,7 +101,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>C:\ProgramData\NVIDIA Corporation\CUDA Samples\v6.5\common\inc;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include;E:\code\C++\openCV\VideoService - 副本\install\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\ProgramData\NVIDIA Corporation\CUDA Samples\v6.5\common\inc;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include;.\src\common;.\install\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>

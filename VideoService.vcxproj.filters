@@ -16,51 +16,48 @@
     <Filter Include="src">
       <UniqueIdentifier>{82784f17-aaf1-4f39-b682-62955530b1c6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\logger">
-      <UniqueIdentifier>{6be780c3-3189-486a-84f6-e0ff96de3a28}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\imag_process">
       <UniqueIdentifier>{b2e3dfb2-58e6-41d1-acc1-b28bcbb470a8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\common">
+      <UniqueIdentifier>{25d1cbf1-e9a2-4d41-9245-4f32e2f0c45f}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\VideoService.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\plateform_public.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="src\VideoCalculator.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="src\TcpServer.cpp">
-      <Filter>src</Filter>
+    <ClCompile Include="src\test_client.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\common\LogFile.cpp">
+      <Filter>src\common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\common\plateform_public.cpp">
+      <Filter>src\common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\common\TCPClient.cpp">
+      <Filter>src\common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\common\TcpServer.cpp">
+      <Filter>src\common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\common\ScreenEngine.cpp">
+      <Filter>src\common</Filter>
     </ClCompile>
     <ClCompile Include="src\C7Platform.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\ScreenEngine.cpp">
-      <Filter>src\imag_process</Filter>
-    </ClCompile>
-    <ClCompile Include="src\LogFile.cpp">
-      <Filter>src\logger</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\platform_config.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="src\cvOperations.hpp">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\VideoCalculator.h">
       <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="src\TcpServer.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\C7Platform.h">
-      <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\minidump.h">
       <Filter>src</Filter>
@@ -71,11 +68,26 @@
     <ClInclude Include="src\ImageProcess.h">
       <Filter>src\imag_process</Filter>
     </ClInclude>
-    <ClInclude Include="src\ScreenEngine.h">
-      <Filter>src\imag_process</Filter>
+    <ClInclude Include="src\common\LogFile.h">
+      <Filter>src\common</Filter>
     </ClInclude>
-    <ClInclude Include="src\LogFile.h">
-      <Filter>src\logger</Filter>
+    <ClInclude Include="src\common\platform_config.h">
+      <Filter>src\common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\TCPClient.h">
+      <Filter>src\common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\TCPCommon.h">
+      <Filter>src\common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\TcpServer.h">
+      <Filter>src\common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\ScreenEngine.h">
+      <Filter>src\common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\C7Platform.h">
+      <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

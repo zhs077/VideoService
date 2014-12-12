@@ -36,8 +36,9 @@
 #include "ImageProcess.h"
 #include "ErrorCode.h"
 #include "configlib.h"
+using namespace uv;
 #define MAX_NUM_RESOURCE 100
-#define MAX_FRAME_LEN	1024*1024 //最大帧大小
+//#define MAX_FRAME_LEN	1024*1024 //最大帧大小
 TCPServer server;
 Logger logger;
 int index = 0;
@@ -66,10 +67,16 @@ int __stdcall DecodeVideoCallBack(UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight,
 	IplImage *image = YUV420_To_IplImage_Opencv(pImg[0], ImgWidth, ImgHeight);
 	if (image == NULL)
 	{
+		cvReleaseImage(&image);
 		return 0;
 	}
 	CvSize cz = cvSize(640,480);
 	IplImage *NewImg = cvCreateImage(cz,image->depth,image->nChannels);
+	if (NewImg == NULL)
+	{
+
+		return 0;
+	}
 	Mat src(NewImg);
 	vector<uchar> buff;//buffer for coding
 	vector<int> param = vector<int>(2);
@@ -184,15 +191,15 @@ void ThreadFun(void *arg)
 		return;
 	}
 
-	unsigned char buffer[MAX_FRAME_LEN]={0};
-	int nLen = MAX_FRAME_LEN;
+	unsigned char buffer[BUFFER_SIZE]={0};
+	int nLen = BUFFER_SIZE;
 	int nFrameType = 0;
 	int nKeyFrameFlag = 0;
 	auto puid_count  = server.puid_count_map.find(client->recv_msg);
 	while (puid_count->second >= 1)
 	{
- 		memset(buffer, 0, MAX_FRAME_LEN);
- 		nLen = MAX_FRAME_LEN;
+ 		memset(buffer, 0, BUFFER_SIZE);
+ 		nLen = BUFFER_SIZE;
  		nFrameType = 0;
  		nKeyFrameFlag = 0;
  		rv = C7_ReceiveFrame(hStreamIV,(char*)buffer,&nLen,&nFrameType,&nKeyFrameFlag);
@@ -333,41 +340,41 @@ bool TcpServerStart(const char *ip, int port)
 	return server.Start(ip,port);
 
 }
-//
-//int main()
-//{
-//	
-//	MiniDump::InitMinDump();
-//	string current_path;
-//	string log_path;//log4cplus 配置文件路径
-//	string ini_file_path;//INI配置文件
-//	current_path = get_application_path(current_path);
-//	log_path = current_path + LOG4CPLUS_CONFIG_FILE;
-//	ini_file_path = current_path + RUNTIME_CONFIG_FILE;
-//	LogFile::SetLogFilePath(log_path);
-//	LOG_INFO( "*********************************************************");
-//	LOG_INFO("VideoService initialize...");
-//	char server_ip[100]={0};
-//	int server_port=0;
-//	config_read_string(ini_file_path.c_str(),"General","ServerIp",server_ip,"");
-//	config_read_integer(ini_file_path.c_str(),"General","ServerPort",&server_port,0);
-//	if(!TcpServerStart(server_ip,server_port))
-//	{
-//		LOG_ERROR("TcpServerStart Fail");
-//		return -1;
-//	}
-//	C7Platform c7Platform;
-//	C7Platform::Init(current_path);
-//	LOG_INFO( "*********************************************************");
-//	LOG_INFO("TCPService initialize success!");
-//	LOG_INFO("TCPService address ---> %s:%d",server_ip,server_port);
-//
-//	while(true) 
-//	{
-//		Sleep_i(10000);
-//	}
-//	server.Close();
-//	C7Platform::UnInit();
-//	
-//	return 0;
-//}
+
+int main()
+{
+	
+	MiniDump::InitMinDump();
+	string current_path;
+	string log_path;//log4cplus 配置文件路径
+	string ini_file_path;//INI配置文件
+	current_path = get_application_path(current_path);
+	log_path = current_path + LOG4CPLUS_CONFIG_FILE;
+	ini_file_path = current_path + RUNTIME_CONFIG_FILE;
+	LogFile::SetLogFilePath(log_path);
+	LOG_INFO( "*********************************************************");
+	LOG_INFO("VideoService initialize...");
+	char server_ip[100]={0};
+	int server_port=0;
+	config_read_string(ini_file_path.c_str(),"General","ServerIp",server_ip,"");
+	config_read_integer(ini_file_path.c_str(),"General","ServerPort",&server_port,0);
+	if(!TcpServerStart(server_ip,server_port))
+	{
+		LOG_ERROR("TcpServerStart Fail");
+		return -1;
+	}
+	C7Platform c7Platform;
+	C7Platform::Init(current_path);
+	LOG_INFO( "*********************************************************");
+	LOG_INFO("TCPService initialize success!");
+	LOG_INFO("TCPService address ---> %s:%d",server_ip,server_port);
+
+	while(true) 
+	{
+		Sleep_i(10000);
+	}
+	server.Close();
+	C7Platform::UnInit();
+	
+	return 0;
+}
