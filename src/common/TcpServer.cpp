@@ -15,7 +15,6 @@ AcceptClient::AcceptClient(int clientId,uv_loop_t*loop)
 	resource_index = 0;
 	int r;
 	read_buf = uv_buf_init((char*)malloc(100),100);
-	//write_buf = uv_buf_init((char*)malloc(BUFFER_SIZE),BUFFER_SIZE);
 	r = uv_mutex_init(&mutex_write_buf);
 	assert(r == 0);
 	r = uv_mutex_init(&mutex_writereq);
@@ -31,8 +30,6 @@ AcceptClient::~AcceptClient()
 	while (!isclosed)
 	{
 		Sleep(10);
-
-
 	}
 	if (read_buf.base)
 	{
@@ -61,8 +58,8 @@ void AcceptClient::closeinl()
 		free(*it);
 	}
 	writereq_list.clear();
+	
 	uv_mutex_unlock(&mutex_writereq);
-	printf("size=%d\n",iplImage_pool.size());
 	uv_close((uv_handle_t*)&client_handle,AfterClientClose);
 	uv_close((uv_handle_t*)&prepare_handle,AfterClientClose);
 }
@@ -160,6 +157,7 @@ void AcceptClient::PrepareCB( uv_prepare_t* handle )
 		
 		//uv_write_t *write_req = (uv_write_t*)malloc(sizeof(*write_req));
 		int r =uv_write(write_req,(uv_stream_t*)&theclass->client_handle,&theclass->write_buf,1,AfterSend);
+		LOG_DEBUG("send frame length:%d",theclass->write_buf.len);
 		if (r)//发送失败不会调用AfterSend
 		{
 			uv_mutex_lock(&theclass->mutex_writereq);
@@ -170,7 +168,9 @@ void AcceptClient::PrepareCB( uv_prepare_t* handle )
 			LOG_ERROR("File:%s-Line:%d:%s",__FILE__,__LINE__,theclass->errmsg.c_str());
 			
 		}
+	
 		theclass->send_msg_pool.pop();
+		
 	//	cvReleaseImage(&NewImg);//释放图像内存
 		//cvReleaseImage(&image);
 	}
@@ -179,7 +179,7 @@ void AcceptClient::PrepareCB( uv_prepare_t* handle )
 }
 void AcceptClient::AfterSend( uv_write_t *req, int status )
 {
-	//printf("0\n");
+	printf("0\n");
 	//回收uv_write_t
 	AcceptClient *theclass = (AcceptClient*)req->data;
 	uv_mutex_lock(&theclass->mutex_writereq);
@@ -293,13 +293,34 @@ int AcceptClient::Send(const char* data, std::size_t len)
 		fprintf(stdout,"%s\n",errmsg.c_str());
 		return 1;
 	}
-	uv_write_t *req = NULL;
-	req = (uv_write_t*)malloc(sizeof(*req));
+	uv_mutex_lock(&mutex_write_buf);
 	write_buf.base = (char*)data;
 	write_buf.len = len;
-	req->data = this;
-	int r = uv_write(req,(uv_stream_t*)&client_handle,&write_buf,1,AfterSend);
-	return r;
+	uv_mutex_unlock(&mutex_write_buf);
+	uv_write_t *write_req = NULL;
+	uv_mutex_lock(&mutex_writereq);
+	if (writereq_list.empty())
+	{
+		uv_mutex_unlock(&mutex_writereq);
+		write_req = (uv_write_t*)malloc(sizeof(*write_req));
+		write_req->data = this;
+	}
+	else
+	{
+		write_req = writereq_list.front();
+		writereq_list.pop_front();
+		uv_mutex_unlock(&mutex_writereq);
+
+	}
+	int r = uv_write((uv_write_t*)write_req, (uv_stream_t*)&client_handle,&write_buf, 1, AfterSend);//发送
+	if (r) 
+	{
+		writereq_list.push_back(write_req);//发送失败，不会调用AfterSend函数，所以得回收req
+		errmsg = GetUVError(r);
+		fprintf(stdout,"send error.%s",errmsg.c_str());
+		return 1;
+	}
+	return 0;
 }
 int AcceptClient::Send(UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight, UINT uiTimeStamp)
 {
@@ -470,6 +491,7 @@ void TCPServer::ClientClosed(int clientid,void *userdata)
 			
 		}
 	}
+	//减少对应的数量如果数量0关闭接收视频线程
 	auto it3 = theclass->puid_count_map.find(puid);
 	if (it3 != theclass->puid_count_map.end())
 	{
@@ -487,8 +509,6 @@ void TCPServer::ClientClosed(int clientid,void *userdata)
 	
 	uv_mutex_unlock(&theclass->mutex_puid_client);
 	uv_mutex_lock(&theclass->mutex_clients);
-
-
 	auto it = theclass->clients_list.find(clientid);
 	if (it != theclass->clients_list.end())
 	{
@@ -497,10 +517,10 @@ void TCPServer::ClientClosed(int clientid,void *userdata)
 			theclass->closedcb(clientid,theclass->closedcb_userdata);
 		}
 		
+		delete it->second;
+		fprintf(stdout,"删除客户端：%d\n",it->first);
+		theclass->clients_list.erase(it->first);
 	}
-	delete it->second;
-	fprintf(stdout,"删除客户端：%d\n",it->first);
-	theclass->clients_list.erase(it->first);
 	uv_mutex_unlock(&theclass->mutex_clients);
 
 
@@ -526,10 +546,6 @@ bool TCPServer::init()
 	}
 	int r;
 	r = uv_prepare_init(&loop,&prepare_handle);
-	if (r)
-	{
-
-	}
 	assert( r ==0);
 	r = uv_prepare_start(&prepare_handle,PrepareCB);
 	assert(r == 0);
@@ -556,14 +572,12 @@ bool TCPServer::init()
 
 void TCPServer::PrepareCB( uv_prepare_t* handle )
 {
-	/////////////////////////prepare阶段检测用户是否发送关闭命令
+	//检测是否关闭
 	TCPServer *theclass = (TCPServer*)handle->data;
 	if (theclass->isuseraskforclosed)
 	{
 		theclass->closeinl();
 	}
-
-	//检测是否关闭
 
 }
 void TCPServer::AcceptConnection(uv_stream_t *server, int status)
@@ -691,7 +705,7 @@ bool TCPServer::Start(const char *ip, int port)
 	assert(r == 0);
 
 	int wait_count = 0;
-	while ( startstatus == START_DIS) 
+	while ( startstatus == START_DIS) //等待服务端启动完成
 	{
 		Sleep_i(100);
 		if(++wait_count > 100) 
@@ -701,9 +715,6 @@ bool TCPServer::Start(const char *ip, int port)
 		}
 	}
 	return startstatus == START_FINISH;
-
-	
-
 }
 
 int TCPServer::Send(int clientid, const char* data, std::size_t len)

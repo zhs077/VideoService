@@ -4,133 +4,48 @@
 #include "platform_config.h"
 
 
-
-IplImage* YUV420_To_IplImage_Opencv(unsigned char* pYUV420, int width, int height)
+typedef struct render_baton_t
 {
-	if (!pYUV420)
-	{
-		return NULL;
-	}
+	//×ª»¯
+	IplImage *srcImg;
 
-	IplImage *yuvimage,*rgbimg,*yimg,*uimg,*vimg,*uuimg,*vvimg;
+	CvSize cz;
+	//BGRÍ¼Ïñ
+	int width;
+	int height;
+	int widthStep;
+	//YUVÍ¼Ïñ
+	int halfWidth ;
+	int halfHeight ;
+	int imgSize ;
+	int yuvBytes ;
+	IplImage* dstImg;
+	IplImage* dstImg1;
 
-	int nWidth = width;
-	int nHeight = height;
-	rgbimg = cvCreateImage(cvSize(nWidth, nHeight),IPL_DEPTH_8U,3);
-	yuvimage = cvCreateImage(cvSize(nWidth, nHeight),IPL_DEPTH_8U,3);
+	//·ÖÅäÏÔ´æ
+	int bgrStep, rgbStep, hsvStep,hsvStep1;
+	uchar* d_pBGR ;
+	uchar* d_pRGB ;
+	uchar* d_pHSV;
+	uchar* d_pHSV1;
 
-	yimg = cvCreateImageHeader(cvSize(nWidth, nHeight),IPL_DEPTH_8U,1);
-	uimg = cvCreateImageHeader(cvSize(nWidth/2, nHeight/2),IPL_DEPTH_8U,1);
-	vimg = cvCreateImageHeader(cvSize(nWidth/2, nHeight/2),IPL_DEPTH_8U,1);
+	int  ypitch, upitch, vpitch, dpitch;
+	uchar* d_pY;
+	uchar* d_pU ;
+	uchar* d_pV ;
+	uchar* d_pD;
+	uchar* h_pHSV;
 
-	uuimg = cvCreateImage(cvSize(nWidth, nHeight),IPL_DEPTH_8U,1);
-	vvimg = cvCreateImage(cvSize(nWidth, nHeight),IPL_DEPTH_8U,1);
+}render_baton_t;
 
-	cvSetData(yimg,pYUV420, nWidth);
-	cvSetData(uimg,pYUV420+nWidth*nHeight, nWidth/2);
-	cvSetData(vimg,pYUV420+long(nWidth*nHeight*1.25), nWidth/2);
-	cvResize(uimg,uuimg,CV_INTER_LINEAR);
-	cvResize(vimg,vvimg,CV_INTER_LINEAR);
-
-	cvMerge(yimg,uuimg,vvimg,NULL,yuvimage);
-	cvCvtColor(yuvimage,rgbimg,CV_YCrCb2RGB);
-
-	cvReleaseImage(&uuimg);
-	cvReleaseImage(&vvimg);
-	cvReleaseImageHeader(&yimg);
-	cvReleaseImageHeader(&uimg);
-	cvReleaseImageHeader(&vimg);
-
-	cvReleaseImage(&yuvimage);
-
-	if (!rgbimg)
-	{
-		return NULL;
-	}
-
-	return rgbimg;
-}
+IplImage* YUV420_To_IplImage_Opencv(unsigned char* pYUV420, int width, int height);
+void alloc_cuda_memory(render_baton_t* baton);
+IplImage* convert(uchar *pYUV, render_baton_t* baton);
+void free_cuda_memory(render_baton_t *baton);
+//void lightEnhance(unsigned char* srcImg, int srcStep, int width, int height, int ValueA);
+void lightBalance(unsigned char* srcImg, int srcStep, int width, int height,int value, unsigned char* srcImg1);
 
 
 
-class CFpsCounter {
-public:
-	CFpsCounter(int nMaxSecond)
-		: m_nMaxSecond(nMaxSecond)
-		, m_nThisSecond(0)
-		, m_nThisSecondImg(0)
-		, m_nLastSecond(0)
-		, m_nLastSecondImg(0) {
-			
-	}
-	
 
-public:
-	void inc() {
-		
-		int nTime = time(NULL);
-		if(nTime != m_nThisSecond) {
-			m_nLastSecond = m_nThisSecond;
-			m_nLastSecondImg = m_nThisSecondImg;
-			m_nThisSecondImg = 1;
-			m_nThisSecond = nTime;
-			findAndInsertIfNotExists(m_mapTimeToFps, m_nLastSecond)
-				= m_nLastSecondImg;
-		} else {
-			++ m_nThisSecondImg;
-		}
-		
-	}
-
-public:
-	int getFps() {
-		return m_nLastSecondImg;
-	}
-
-	int getAverageFps() {
-		int t = time(NULL) - m_nMaxSecond;
-		int total = 0;
-		while(m_mapTimeToFps.begin() != m_mapTimeToFps.end()) {
-			if(m_mapTimeToFps.begin()->first < t)
-				m_mapTimeToFps.erase(m_mapTimeToFps.begin());
-			else break;
-		}
-		for(map< int, int>::iterator itor = m_mapTimeToFps.begin();
-			m_mapTimeToFps.end() != itor; ++ itor)
-		{
-			total += itor->second;
-		}
-		return total / m_nMaxSecond;
-	}
-
-private:
-	map< int, int> m_mapTimeToFps;
-	 int m_nMaxSecond;
-	 int m_nThisSecond;
-	 int m_nThisSecondImg;
-	 int m_nLastSecond;
-	 int m_nLastSecondImg;
-	 	CRITICAL_SECTION m_cs;
-	
-};
-
-class CVideoCalculator
-	: public CFpsCounter
-{
-public:
-	CVideoCalculator(void);
-	~CVideoCalculator(void);
-
-public:
-	void onReceivedImage();
-
-public:
-	int getFps();
-
-public:
-	int getAverageFps();
-
-private:
-	//CFpsCounter m_fpsCounter;
-};
 #endif

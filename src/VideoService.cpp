@@ -36,6 +36,8 @@
 #include "ImageProcess.h"
 #include "ErrorCode.h"
 #include "configlib.h"
+
+
 using namespace uv;
 #define MAX_NUM_RESOURCE 100
 //#define MAX_FRAME_LEN	1024*1024 //最大帧大小
@@ -54,9 +56,41 @@ void ThreadFun(void *arg);
 int GetIV(AcceptClient *client,C7_HSTREAM &hStreamIV, HANDLE &hVARender,char *windows_name );
 //启动服务
 bool TcpServerStart(const char *ip, int port);
-
+CvCapture* pCapture;
 int __stdcall DecodeVideoCallBack(UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight, UINT uiTimeStamp, void *pContext)
 {
+// 	const char *puid = (const char *)pContext;
+// 	assert(puid);
+// 	if (puid == NULL)
+// 	{
+// 		return 0;
+// 	}
+// 	IplImage *pFrame=cvQueryFrame( pCapture );  
+// 	if (pFrame == NULL)
+// 	{
+// 		return 0;
+// 	}
+// 	Mat src(pFrame);
+// 	vector<uchar> buff;//buffer for coding
+// 	vector<int> param = vector<int>(2);
+// 	param[0]=CV_IMWRITE_JPEG_QUALITY;
+// 	param[1]=60;//default(95) 0-100
+// 	imencode(".jpg",src,buff,param);
+// 	multimap<string,int>puid_client_map = server.puid_client_map;
+// 	uv_mutex_lock(&server.mutex_puid_client);
+// 	int num = puid_client_map.count(puid);
+// 	auto it = puid_client_map.find(puid);
+// 	for (int i=0; i<num;i++)
+// 	{
+// 
+// 		server.Send(it->second,buff);
+// 		++it;
+// 
+// 	}
+// 	cvReleaseImage(&pFrame);
+// 	uv_mutex_unlock(&server.mutex_puid_client);
+
+	
 
 	const char *puid = (const char *)pContext;
 	assert(puid);
@@ -64,32 +98,45 @@ int __stdcall DecodeVideoCallBack(UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight,
 	{
 		return 0;
 	}
-	IplImage *image = YUV420_To_IplImage_Opencv(pImg[0], ImgWidth, ImgHeight);
-	if (image == NULL)
+	auto baton =server.render_baton_map.find(puid);
+	IplImage* img = convert(pImg[0],(render_baton_t*)baton->second);
+	if (img == NULL)
 	{
-		cvReleaseImage(&image);
 		return 0;
 	}
-	CvSize cz = cvSize(640,480);
-	IplImage *NewImg = cvCreateImage(cz,image->depth,image->nChannels);
-	if (NewImg == NULL)
-	{
 
-		return 0;
-	}
-	Mat src(NewImg);
+	CvSize cz = cvSize(640,480);
+	//IplImage *NewImg = cvCreateImage(cz,img->depth,img->nChannels);
+	//cvResize(img, NewImg,CV_INTER_LINEAR );
+	//  			 			cvReleaseImage(&img);//释放图像内存
+	//IplImage *image = YUV420_To_IplImage_Opencv(pImg[0], ImgWidth, ImgHeight);
+	//if (image == NULL)
+	//{
+		//cvReleaseImage(&image);
+	//	return 0;
+	//}
+	//cvSaveImage("E:\\test2.jpg",image);
+//	CvSize cz = cvSize(640,480);
+	//IplImage *NewImg = cvCreateImage(cz,image->depth,image->nChannels);
+	
+	//if (NewImg == NULL)
+	//{
+
+	//	//return 0;
+	//}
+	//IplImage* NewImg=cvLoadImage("D:\\1.jpg",-1);
+	Mat src(img);
 	vector<uchar> buff;//buffer for coding
 	vector<int> param = vector<int>(2);
 	param[0]=CV_IMWRITE_JPEG_QUALITY;
 	param[1]=60;//default(95) 0-100
 	imencode(".jpg",src,buff,param);
-	cvReleaseImage(&image);
-	cvReleaseImage(&NewImg);
+	//cvReleaseImage(&img);
+	//cvReleaseImage(&NewImg);
 	multimap<string,int>puid_client_map = server.puid_client_map;
 	uv_mutex_lock(&server.mutex_puid_client);
 	int num = puid_client_map.count(puid);
 	auto it = puid_client_map.find(puid);
-
 	for (int i=0; i<num;i++)
 	{
 		//server.Send(it->second,pImg,ImgWidth,ImgHeight,uiTimeStamp);
@@ -114,19 +161,7 @@ int __stdcall DecodeVideoCallBack(UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight,
 
 int GetIV(AcceptClient *client,C7_HSTREAM &hStreamIV, HANDLE &hVARender,char *windows_name )
 {
-	
 	auto it =C7Platform::resourceMap.find(client->resource_puid);
-	if (it == C7Platform::resourceMap.end() || (it->second.at(client->resource_index).szType != RT_IV) )
-	{
-
-		return 1;
-
-	}
-	auto puid_count  = server.puid_count_map.find(client->recv_msg);
-	if (puid_count == server.puid_count_map.end())
-	{
-		return 1;
-	}
 	vector<ResourceInfo> selectInfo = it->second;
 	C7_HRESOURCE ResourcesArr[MAX_NUM_RESOURCE] = { NULL};
 	int nResCnt = MAX_NUM_RESOURCE;
@@ -135,21 +170,15 @@ int GetIV(AcceptClient *client,C7_HSTREAM &hStreamIV, HANDLE &hVARender,char *wi
 	if (rv != NRCAP_SUCCESS)
 	{
 		return rv;
-		//client
-		//LOG4CPLUS_ERROR(logger," Error: C7_StartStream ERROR_CODE:"<<rv);
-
-
 	}
+	auto puid_count  = server.puid_count_map.find(client->recv_msg);
 	hVARender =VADR_Init(100);
 	rv = VADR_SetVideoDecodeCallBack(hVARender, DecodeVideoCallBack, FRAMEFMT_YUV420,(void*)puid_count->first.c_str());
 	if (rv != NRCAP_SUCCESS)
 	{
-
+		C7_StopStream(hStreamIV);
 		return rv;
-		//LOG4CPLUS_ERROR(logger," Error: VADR_SetVideoDecodeCallBack ERROR_CODE:"<<rv);
-
 	}
-	
 	cvNamedWindow(windows_name, CV_WINDOW_AUTOSIZE);
 	HWND hPlayHwnd = (HWND)cvGetWindowHandle(windows_name);
 	cvResizeWindow(windows_name, 720, 576 );
@@ -158,7 +187,6 @@ int GetIV(AcceptClient *client,C7_HSTREAM &hStreamIV, HANDLE &hVARender,char *wi
 	{
 		cvDestroyWindow(windows_name);
 		return rv;
-		//LOG4CPLUS_ERROR(logger," Error: VADR_SetPlayWnd ERROR_CODE:"<<rv);
 
 	}
 	//开始解码显示
@@ -167,11 +195,24 @@ int GetIV(AcceptClient *client,C7_HSTREAM &hStreamIV, HANDLE &hVARender,char *wi
 	{
 		cvDestroyWindow(windows_name);
 		return rv;
-		//LOG4CPLUS_ERROR(logger," Error: VADR_StartPreview ERROR_CODE:"<<rv);
 
 	}
 	return 0;
 	
+}
+int SearchVideo(AcceptClient* client)
+{
+	auto it =C7Platform::resourceMap.find(client->resource_puid);
+	if (it == C7Platform::resourceMap.end() || client->resource_index >= it->second.size()||(it->second.at(client->resource_index).szType != RT_IV) )
+	{
+		return 1;
+	}
+	auto puid_count  = server.puid_count_map.find(client->recv_msg);
+	if (puid_count == server.puid_count_map.end())
+	{
+		return 1;
+	}
+	return 0;
 }
 void ThreadFun(void *arg)
 {
@@ -185,17 +226,22 @@ void ThreadFun(void *arg)
 	if (rv != SUCCESS)
 	{
 		LOG_ERROR("File:%s--Line:%d: GetIV error_code: %d",__FILE__,__LINE__,rv);
-		char msg[10]={0};
-		client->Send(_itoa(rv,msg,10),strlen(msg));
+		static char msg[10]={0};
+		_itoa(rv,msg,10);
+		client->Send(msg,strlen(msg));
 		client->Close();
-		return;
-	}
 
+	}
+	string tmp = client->recv_msg;//收到的消息
+	render_baton_t * baton = new render_baton_t();
+	alloc_cuda_memory(baton);
+	server.render_baton_map.insert(make_pair(tmp,baton));
 	unsigned char buffer[BUFFER_SIZE]={0};
 	int nLen = BUFFER_SIZE;
 	int nFrameType = 0;
 	int nKeyFrameFlag = 0;
 	auto puid_count  = server.puid_count_map.find(client->recv_msg);
+	
 	while (puid_count->second >= 1)
 	{
  		memset(buffer, 0, BUFFER_SIZE);
@@ -216,8 +262,6 @@ void ThreadFun(void *arg)
  		else
  		{
 			LOG_ERROR("File:%s--Line:%d: GetIV error_code: %d",__FILE__,__LINE__,rv);
-			
- 		//	LOG4CPLUS_ERROR(logger," Error: C7_ReceiveFrame ERROR_CODE:"<<rv);
  			break;
  
  		}
@@ -227,6 +271,8 @@ void ThreadFun(void *arg)
 	}
 	LOG_INFO("threadFun Exit");
 	cvDestroyWindow(windows_name);
+	
+
 	//一定要释放资源
 	if (hStreamIV != NULL)
 	{
@@ -245,28 +291,30 @@ void ThreadFun(void *arg)
 		//return;
 	}
 	VADR_Close(hVARender);
-	//C7_Close(C7Platform::session);
-	//C7_Terminate();
 	uv_mutex_lock(&server.mutex_puid_client);
 	int num = server.puid_client_map.count(puid_count->first);
 	auto it2 = server.puid_client_map.find(puid_count->first);
-
 	for (int i=0; i<num;i++)
 	{
 		server.CloseClient(it2->second);
 		++it2;
 	}
+	auto baton_t = server.render_baton_map.find(tmp);
+	if (baton_t != server.render_baton_map.end())
+	{
+		free_cuda_memory((render_baton_t*)baton_t->second);
+		delete baton_t->second;
+		server.render_baton_map.erase(baton_t);
+	}
 	uv_mutex_unlock(&server.mutex_puid_client);
-
-
 }
-//客户端发送类似的字符串："12324,1"代表哪个ID第几个索引视频
+//客户端发送类似的字符串："151038402365732956,1"代表哪个ID第几个索引视频
 void ReadCB(int cliendid, void *clientdata, const  char* buf,void *serverdata)
 {
 	
 	TCPServer *server = (TCPServer*)serverdata;
 	assert(server);
-	AcceptClient *client = (AcceptClient *)clientdata;
+	AcceptClient *client = (AcceptClient*)clientdata;
 	string tmp = buf;
 	char *id = strtok((char*)buf,",");
 	char *index = strtok(NULL,",");
@@ -291,9 +339,21 @@ void ReadCB(int cliendid, void *clientdata, const  char* buf,void *serverdata)
 		client->resource_index = (index ==NULL ? 0:atoi((const char*)index));
 		server->puid_thread_map.insert(make_pair(tmp,client->threadId));
 		server->puid_client_map.insert(make_pair(tmp,cliendid));
-		uv_mutex_unlock(&server->mutex_puid_client);
-		uv_thread_create(&client->threadId,ThreadFun,client);
 
+		uv_mutex_unlock(&server->mutex_puid_client);
+		int rv = SearchVideo(client);
+		if (rv == 0)//找到视频
+		{
+			uv_thread_create(&client->threadId,ThreadFun,client);
+		}
+		else
+		{
+			printf("not find video\n");
+			static char msg[10]={0};
+			_itoa(2,msg,10);
+			client->Send(msg,strlen(msg));
+			client->Close();
+		}
 		
 	}
 	else
@@ -302,24 +362,6 @@ void ReadCB(int cliendid, void *clientdata, const  char* buf,void *serverdata)
 		server->puid_client_map.insert(make_pair(tmp,cliendid));
 		uv_mutex_unlock(&server->mutex_puid_client);
 	}
-	/*
-	AcceptClient* client = (AcceptClient*)userdata;
-	assert(client);
-	//151038402365732956
-	if (strcmp((const char*)buf,"0") != 0)
-	{
-			client->resource_puid = buf;
-			client->isplay = true;
-			uv_thread_create(&client->threadId,ThreadFun,client);
-	}
-	else
-	{
-	
-		//client->ready = false;
-	}
-	*/
-
-	
 }
 void NewConnect(int clientid, void* userdata)
 {
@@ -375,6 +417,5 @@ int main()
 	}
 	server.Close();
 	C7Platform::UnInit();
-	
 	return 0;
 }

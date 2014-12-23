@@ -51,6 +51,9 @@
     <ClCompile Include="src\C7Platform.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\ImageProcess.cpp">
+      <Filter>src\imag_process</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\cvOperations.hpp">

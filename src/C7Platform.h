@@ -11,8 +11,6 @@ typedef struct ResourceInfo
 	string szType;
 	int usable;	
 	int index;
-
-
 }ResourceInfo;
 typedef map<string,vector<ResourceInfo> > ResourceMap;
 class C7Platform
@@ -23,10 +21,14 @@ public:
 	//初始化C7环境
 	static bool Init(const string& current_path);
 	static void UnInit();
-	public:
+private:
+	static void CreateResource(void* *pRsc,int count);
+
+public:
 	static C7_HSESSION session;
 public:
 	static ResourceMap resourceMap;
+
 };
 
 

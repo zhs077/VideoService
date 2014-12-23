@@ -40,16 +40,19 @@ bool C7Platform::Init(const string& current_path)
 	if (rv != NRCAP_SUCCESS)
 	{
 		//LOG4CPLUS_ERROR(logger," Error: C7_Initialize ERROR_CODE:"<<rv);
+		fprintf(stdout,"Error: C7_Initialize ERROR_CODE:%d\n",rv);
 		exit(-1);
 	}
 	VADR_GlobalInitEx((char*)oemPath.c_str());
 	rv = C7_Open(remote_address,user_name,password,edpit,&session);
 	if (rv != NRCAP_SUCCESS)
 	{
+		fprintf(stdout,"Error: C7_Open ERROR_CODE:%d\n",rv);
 		//LOG4CPLUS_ERROR(logger," Error: C7_Open ERROR_CODE:"<<rv);
 		exit(-1);
 	}
 	int nPlatformType;
+	C7_STR szPUID;
 	C7_STR szName;
 	C7_STR szType;
 	int nUsable = 0;
@@ -63,6 +66,7 @@ bool C7Platform::Init(const string& current_path)
 		rv = C7_ForkPUList(session,PUArr,&count,nOffset);
 		if (rv != NRCAP_SUCCESS)
 		{
+			fprintf(stdout,"Error: C7_ForkPUList ERROR_CODE:%d\n",rv);
 			//LOG4CPLUS_ERROR(logger," Error: C7_ForkPUList ERROR_CODE:"<<rv);
 			exit(-1);
 
@@ -71,7 +75,7 @@ bool C7Platform::Init(const string& current_path)
 		for (int i=0 ; i!= count;i++)
 		{
 			C7_HRESOURCE hPU = PUArr[i];
-			C7_STR szPUID;
+			//C7_STR szPUID;
 			int nOnline = 0;
 			C7_GetResourcePUID(hPU, szPUID);
 			C7_GetResourceUsable(hPU, &nUsable);
@@ -125,31 +129,90 @@ bool C7Platform::Init(const string& current_path)
 	}
 	else //连接设备
 	{
-		//直连设备
-		// 		C7_HRESOURCE hPU;
-		// 		rv = C7_ForkOnePU(session, "", &hPU);
-		// 		if (rv == NRCAP_SUCCESS)
-		// 		{
-		// 			C7_GetResourceType(hPU,szType);
-		// 			C7_GetResourceUsable(hPU,&nUsable);
-		// 			if (nUsable == 0 && strcmp(szType, RT_SELF) == 0)
-		// 			{
-		// 				//LOG4CPLUS_ERROR(logger,"No Find " <<id << " Camera!!!");
-		// 				//不在线设备
-		// 				return false;
-		// 			}
-		// 			C7_GetResourcePUID(hPU,szPUID);
-		// 			C7_GetResourceName(hPU,szName);
-		// 			ResourceInfo info;
-		// 			info.hresource = hPU;
-		// 			info.szPUID = szPUID;
-		// 			info.szType = szType;
-		// 			info.szName = szName;
-		// 			info.usable = nUsable;
-		// 			resourceMap.insert(make_pair(id,info));
+				vector<ResourceInfo> vtInfo;
+		 		C7_HRESOURCE hPU;
+		 		rv = C7_ForkOnePU(session, "", &hPU);
+		 		if (rv == NRCAP_SUCCESS)
+		 		{
+		 			CreateResource(&hPU, 1);
 
-		//		}
+				}
 	}
 
 	return true;
+}
+
+
+void C7Platform::CreateResource(void* *pRsc, int nCnt)
+{
+		for (int i = 0; i != nCnt; i++)
+		{
+			C7_HRESOURCE hPU = pRsc[i];
+			C7_STR szPUID;
+			C7_GetResourcePUID(pRsc[i], szPUID);
+
+			//获取资源类型
+			C7_STR szType = { NULL };
+			int rv = C7_GetResourceType(pRsc[i], szType);
+			if (rv != NRCAP_SUCCESS)
+			{
+				return;
+
+			}
+			int nUsable = 0;
+			rv = C7_GetResourceUsable(pRsc[i], &nUsable);
+			if (nUsable == 0 && strcmp(szType, RT_SELF) == 0)
+			{
+				//不在线设备
+				continue;
+			}
+
+			C7_STR szName = { NULL };
+			rv = C7_GetResourceName(pRsc[i], szName);
+			//如果资源类型是站点本身则进行递归
+			if (strcmp(szType, RT_SELF) == 0)
+			{
+				
+				C7_HRESOURCE ResourcesArr[GET_CNT] = { NULL };
+				int nResCnt = GET_CNT;
+				rv = C7_ForkPUResource(pRsc[i], ResourcesArr, &nResCnt);
+				if (rv !=NRCAP_SUCCESS)
+				{
+					return;
+				}
+				vector<ResourceInfo> vtInfo;
+				for (int j =0; j < nResCnt; j++)
+				{
+					C7_HRESOURCE hRes = ResourcesArr[j];
+					C7_STR szType;
+					int nResIdx = 0;
+					C7_GetResourceName(hRes, szName);
+					C7_GetResourceType(hRes, szType);
+					C7_GetResourceIndex(hRes, &nResIdx);
+					C7_GetResourceUsable(hRes,&nUsable);
+					if (nUsable == 0 && strcmp(szType, RT_SELF) == 0)
+					{			
+						//不在线设备
+						continue;
+					}
+					C7_GetResourcePUID(hPU, szPUID);
+					ResourceInfo info;
+					info.hresource = hRes;
+					info.szPUID = szPUID;
+					info.szType = szType;
+					info.szName = szName;
+					info.usable = nUsable;
+					info.index = nResIdx;
+					vtInfo.push_back(info);
+				}
+				resourceMap.insert(make_pair("151038402365732956",vtInfo));
+			
+
+			}
+			else
+			{
+				
+			}
+		}
+		
 }

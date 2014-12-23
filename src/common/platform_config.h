@@ -129,9 +129,7 @@ string get_application_path(string &str);
 string ExtractFilePath(string filename);
 void Sleep_i(int mseconds);
 
-
 typedef  uchar UCHAR;
-
 typedef  unsigned int UINT;
 
 #endif
@@ -140,4 +138,4 @@ typedef  unsigned int UINT;
 
 //void lightBalance(unsigned char* srcImg, int srcStep, int width, int height, unsigned char* srcImg1);
 //void lightEnhance(unsigned char* srcImg, int srcStep, int width, int height, int ValueA);
-void lightBalance(unsigned char* srcImg, int srcStep, int width, int height,int threshold);
+

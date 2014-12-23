@@ -20,8 +20,8 @@ TCPClient::TCPClient(void)
 	r = uv_mutex_init(&mutex_write_buf);
 	assert(r == 0);
 	read_buf = uv_buf_init((char*)malloc(BUFFER_SIZE),BUFFER_SIZE);
-	write_buf = uv_buf_init((char*)malloc(100),100);
-	memset(recv_buffer,0,sizeof(recv_buffer));
+	//write_buf = uv_buf_init((char*)malloc(100),100);
+	//memset(recv_buffer,0,sizeof(recv_buffer));
 }
 
 
@@ -35,12 +35,12 @@ TCPClient::~TCPClient(void)
 		read_buf.base = NULL;
 		read_buf.len = 0;
 	}
-	if (write_buf.base) 
+	/*if (write_buf.base) 
 	{
-		free(write_buf.base);
-		write_buf.base = NULL;
-		write_buf.len = 0;
-	}
+	free(write_buf.base);
+	write_buf.base = NULL;
+	write_buf.len = 0;
+	}*/
 	 uv_loop_close(&loop);
 	 uv_mutex_destroy(&mutex_write_buf);
 	 uv_mutex_destroy(&mutex_writereq);
@@ -277,8 +277,8 @@ void TCPClient::AfterRecv(uv_stream_t* stream,ssize_t nread,const uv_buf_t* buf)
 	{
 		if (theclass->recvcb)
 		{
-			buf->base[nread] ='\0';
-			theclass->recvcb((const unsigned char*)buf->base,theclass->recvcb_userdata);
+			//buf->base[buf->len]='\0';
+			theclass->recvcb(buf->base,nread,theclass->recvcb_userdata);
 		}
 
 	}
@@ -318,6 +318,7 @@ int TCPClient::Send(const char* data, std::size_t len)
 		return 1;
 	}
 	uv_mutex_lock(&mutex_write_buf);
+	
 	write_buf.base = (char*)data;
 	write_buf.len = len;
 	uv_mutex_unlock(&mutex_write_buf);

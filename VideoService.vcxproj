@@ -17,6 +17,7 @@
     <ClCompile Include="src\common\ScreenEngine.cpp" />
     <ClCompile Include="src\common\TCPClient.cpp" />
     <ClCompile Include="src\common\TcpServer.cpp" />
+    <ClCompile Include="src\ImageProcess.cpp" />
     <ClCompile Include="src\test_client.cpp" />
     <ClCompile Include="src\VideoCalculator.cpp" />
     <ClCompile Include="src\VideoService.cpp" />
@@ -66,11 +67,13 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>.\install\bin</OutDir>
+    <OutDir>.\install\bin\</OutDir>
+    <IntDir>.\obj\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>.\install\bin</OutDir>
+    <OutDir>.\install\bin\</OutDir>
+    <IntDir>.\obj\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

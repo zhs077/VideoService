@@ -1,7 +1,7 @@
-﻿生成启动时间为 2014/12/2 15:18:33。
-     1>项目“E:\code\C++\openCV\VideoService - 副本\deps\log4cplus\log4cplus-1.1.3\msvc10\log4cplus.vcxproj”在节点 2 上(Rebuild 个目标)。
+﻿生成启动时间为 2014/12/17 14:52:14。
+     1>项目“E:\code\C++\video_code\VideoService\deps\log4cplus\log4cplus-1.1.3\msvc10\log4cplus.vcxproj”在节点 2 上(Rebuild 个目标)。
      1>ClCompile:
-         F:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\CL.exe /c /I..\include /Zi /nologo /W3 /WX- /O2 /Ob2 /Oi /Ot /Oy /GL /D LOG4CPLUS_BUILD_DLL /D NDEBUG /D _SECURE_SCL=0 /D _HAS_ITERATOR_DEBUGGING=0 /D WIN32 /D _WIN32_WINNT=0x0501 /D WINVER=0x0501 /D INSIDE_LOG4CPLUS /D _SCL_SECURE_NO_DEPRECATE /D _CRT_SECURE_NO_DEPRECATE /D _CRT_SECURE_NO_WARNINGS /D _USING_V110_SDK71_ /D _WINDLL /D _MBCS /GF /Gm- /EHsc /MT /GS- /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Release\\" /Fd"E:\code\C++\openCV\VideoService - 副本\install\lib\log4cplus.c.pdb" /Gd /TP /analyze- /errorReport:prompt ..\src\appender.cxx ..\src\clogger.cxx ..\src\configurator.cxx ..\src\fileinfo.cxx "..\src\global-init.cxx" ..\src\hierarchy.cxx ..\src\hierarchylocker.cxx ..\src\layout.cxx ..\src\lockfile.cxx ..\src\log4judpappender.cxx ..\src\logger.cxx ..\src\loggingevent.cxx ..\src\loggingmacros.cxx ..\src\mdc.cxx ..\src\ndc.cxx ..\src\patternlayout.cxx ..\src\version.cxx ..\src\asyncappender.cxx ..\src\consoleappender.cxx ..\src\fileappender.cxx ..\src\nteventlogappender.cxx ..\src\nullappender.cxx ..\src\socketappender.cxx ..\src\syslogappender.cxx ..\src\win32consoleappender.cxx ..\src\win32debugappender.cxx ..\src\env.cxx ..\src\factory.cxx ..\src\filter.cxx ..\src\loggerimpl.cxx ..\src\loglevel.cxx ..\src\objectregistry.cxx ..\src\rootlogger.cxx ..\src\syncprims.cxx ..\src\threads.cxx ..\src\tls.cxx ..\src\appenderattachableimpl.cxx ..\src\loglog.cxx ..\src\logloguser.cxx ..\src\pointer.cxx ..\src\property.cxx ..\src\queue.cxx ..\src\sleep.cxx ..\src\snprintf.cxx "..\src\socket-win32.cxx" ..\src\socket.cxx ..\src\socketbuffer.cxx "..\src\stringhelper-clocale.cxx" "..\src\stringhelper-cxxlocale.cxx" "..\src\stringhelper-iconv.cxx" ..\src\stringhelper.cxx ..\src\timehelper.cxx
+         F:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\CL.exe /c /I..\include /Zi /nologo /W3 /WX- /O2 /Ob2 /Oi /Ot /Oy /GL /D LOG4CPLUS_BUILD_DLL /D NDEBUG /D _SECURE_SCL=0 /D _HAS_ITERATOR_DEBUGGING=0 /D WIN32 /D _WIN32_WINNT=0x0501 /D WINVER=0x0501 /D INSIDE_LOG4CPLUS /D _SCL_SECURE_NO_DEPRECATE /D _CRT_SECURE_NO_DEPRECATE /D _CRT_SECURE_NO_WARNINGS /D _WINDLL /D _MBCS /GF /Gm- /EHsc /MT /GS- /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Release\\" /Fd"E:\code\C++\video_code\VideoService\install\lib\log4cplus.c.pdb" /Gd /TP /analyze- /errorReport:prompt ..\src\appender.cxx ..\src\clogger.cxx ..\src\configurator.cxx ..\src\fileinfo.cxx "..\src\global-init.cxx" ..\src\hierarchy.cxx ..\src\hierarchylocker.cxx ..\src\layout.cxx ..\src\lockfile.cxx ..\src\log4judpappender.cxx ..\src\logger.cxx ..\src\loggingevent.cxx ..\src\loggingmacros.cxx ..\src\mdc.cxx ..\src\ndc.cxx ..\src\patternlayout.cxx ..\src\version.cxx ..\src\asyncappender.cxx ..\src\consoleappender.cxx ..\src\fileappender.cxx ..\src\nteventlogappender.cxx ..\src\nullappender.cxx ..\src\socketappender.cxx ..\src\syslogappender.cxx ..\src\win32consoleappender.cxx ..\src\win32debugappender.cxx ..\src\env.cxx ..\src\factory.cxx ..\src\filter.cxx ..\src\loggerimpl.cxx ..\src\loglevel.cxx ..\src\objectregistry.cxx ..\src\rootlogger.cxx ..\src\syncprims.cxx ..\src\threads.cxx ..\src\tls.cxx ..\src\appenderattachableimpl.cxx ..\src\loglog.cxx ..\src\logloguser.cxx ..\src\pointer.cxx ..\src\property.cxx ..\src\queue.cxx ..\src\sleep.cxx ..\src\snprintf.cxx "..\src\socket-win32.cxx" ..\src\socket.cxx ..\src\socketbuffer.cxx "..\src\stringhelper-clocale.cxx" "..\src\stringhelper-cxxlocale.cxx" "..\src\stringhelper-iconv.cxx" ..\src\stringhelper.cxx ..\src\timehelper.cxx
          appender.cxx
          clogger.cxx
          configurator.cxx
@@ -57,7 +57,7 @@
          stringhelper.cxx
          timehelper.cxx
        Link:
-         F:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"E:\code\C++\openCV\VideoService - 副本\install\lib\log4cplus.dll" /INCREMENTAL:NO /NOLOGO ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"E:\code\C++\openCV\VideoService - 副本\install\lib\log4cplus.pdb" /OPT:REF /OPT:NOICF /LTCG /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"E:\code\C++\openCV\VideoService - 副本\install\lib\log4cplus.lib" /MACHINE:X86 /SAFESEH /DLL Release\appender.obj
+         F:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"E:\code\C++\video_code\VideoService\install\lib\log4cplus.dll" /INCREMENTAL:NO /NOLOGO ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"E:\code\C++\video_code\VideoService\install\lib\log4cplus.pdb" /OPT:REF /OPT:NOICF /LTCG /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"E:\code\C++\video_code\VideoService\install\lib\log4cplus.lib" /MACHINE:X86 /SAFESEH /DLL Release\appender.obj
          Release\clogger.obj
          Release\configurator.obj
          Release\fileinfo.obj
@@ -109,12 +109,12 @@
          "Release\stringhelper-iconv.obj"
          Release\stringhelper.obj
          Release\timehelper.obj
-            正在创建库 E:\code\C++\openCV\VideoService - 副本\install\lib\log4cplus.lib 和对象 E:\code\C++\openCV\VideoService - 副本\install\lib\log4cplus.exp
+            正在创建库 E:\code\C++\video_code\VideoService\install\lib\log4cplus.lib 和对象 E:\code\C++\video_code\VideoService\install\lib\log4cplus.exp
          正在生成代码
          已完成代码的生成
-         log4cplus.vcxproj -> E:\code\C++\openCV\VideoService - 副本\install\lib\log4cplus.dll
-     1>已完成生成项目“E:\code\C++\openCV\VideoService - 副本\deps\log4cplus\log4cplus-1.1.3\msvc10\log4cplus.vcxproj”(Rebuild 个目标)的操作。
+         log4cplus.vcxproj -> E:\code\C++\video_code\VideoService\install\lib\log4cplus.dll
+     1>已完成生成项目“E:\code\C++\video_code\VideoService\deps\log4cplus\log4cplus-1.1.3\msvc10\log4cplus.vcxproj”(Rebuild 个目标)的操作。
 
 生成成功。
 
-已用时间 00:01:02.29
+已用时间 00:01:14.20

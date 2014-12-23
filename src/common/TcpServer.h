@@ -6,6 +6,7 @@
 #include "platform_config.h"
 #include "ScreenEngine.h"
 #include "LogFile.h"
+
 namespace uv
 {
 
@@ -19,9 +20,9 @@ public:
 	void SetRecvCB(ServerRecvCB pfun, void *userdata);//设置接收数据回调函数
 	void SetClosedCB(TcpCloseCB,void *userdata);//设置关闭的回调函数
 	int  Send(const char* data, std::size_t len);//发送字符串
-	int  Send(IplImage *image);
+	int  Send(IplImage *image);//废弃
 	int  Send(const vector<uchar> & msg);//将消息放入队列
-	int  Send(UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight, UINT uiTimeStamp);
+	int  Send(UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight, UINT uiTimeStamp);//废弃
 	inline void Close(){isuseraskforclosed = true;}
 	inline bool IsClose(){return isclosed;}
 	const char* GetLastErrMsg() const 
@@ -68,6 +69,8 @@ private:
 
 
 };
+
+
 class TCPServer
 {
 public:
@@ -75,6 +78,7 @@ public:
 	~TCPServer(void);
 
 	bool Start(const char *ip, int port);
+	//开启日志制定日志配置文件所在路径
 	bool StartLog(const string& filePath);
 	const char* GetLastErrMsg() const 
 	{
@@ -92,6 +96,7 @@ public:
 	inline void Close(){isuseraskforclosed = true;}//用户关闭服务端 
 	inline bool IsClose(){return isclosed;}
 	void CloseClient(int clientid);
+
 private:
 	bool init();
 	bool bind(const char* ip, int port);
@@ -133,10 +138,11 @@ private:
 	int serverport;//连接的端口号
 	int startstatus;//服务端状态
 	map<int,AcceptClient*> clients_list;//子客户端链接
-	NewConnectCB newconcb;//回调函数
-	void *newconcb_userdata;
+	
 
 private:
+	NewConnectCB newconcb;//回调函数
+	void *newconcb_userdata;
 	ServerRecvCB recvcb;//接收数据回调给用户的函数
 	TcpCloseCB closedcb;//关闭后回调给TCPServer
 	void *closedcb_userdata;
@@ -147,6 +153,7 @@ public:
 	map<string,atomic<int> > puid_count_map;//播放视频对应的次数
 	map<string,uv_thread_t> puid_thread_map;
 	uv_mutex_t mutex_puid_count;
+	map<string,void*>render_baton_map;//cudua用到的内存
 
 
 

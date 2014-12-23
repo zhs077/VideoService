@@ -56,7 +56,7 @@ namespace uv
 		int connect_status;//连接状态
 		string errmsg;
 		int close_type;//-1代表服务器主动断开，其他代表客户端主动断开
-		unsigned char recv_buffer[BUFFER_SIZE];//收到的buffer
+		//unsigned char recv_buffer[BUFFER_SIZE];//收到的buffer
 	private:
 		static void AfterConnect(uv_connect_t* req, int status);
 		static void AfterRecv(uv_stream_t* stream,ssize_t nread,const uv_buf_t* buf);
