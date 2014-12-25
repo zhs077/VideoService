@@ -60,8 +60,9 @@ void AcceptClient::closeinl()
 	writereq_list.clear();
 	
 	uv_mutex_unlock(&mutex_writereq);
-	uv_close((uv_handle_t*)&client_handle,AfterClientClose);
 	uv_close((uv_handle_t*)&prepare_handle,AfterClientClose);
+	uv_close((uv_handle_t*)&client_handle,AfterClientClose);
+	
 }
 void AcceptClient::AfterClientClose( uv_handle_t *handle )
 {
@@ -106,7 +107,14 @@ void AcceptClient::PrepareCB( uv_prepare_t* handle )
 	{
 		return;
 	}
-	if(!theclass->send_msg_pool.empty())
+	uv_mutex_lock(&theclass->mutex_write_buf);
+	if (theclass->send_msg_pool.empty())
+	{
+		uv_mutex_unlock(&theclass->mutex_write_buf);
+		return;
+	}
+	uv_mutex_unlock(&theclass->mutex_write_buf);
+	
 	{
 		//uv_mutex_lock(&theclass->mutex_write_buf);
 		//auto_ptr<ReceivedImage> image =theclass->image_pool.pop();
@@ -121,7 +129,8 @@ void AcceptClient::PrepareCB( uv_prepare_t* handle )
 		//CvSize cz = cvSize(640,480);
 		//IplImage *NewImg = cvCreateImage(cz,img->depth,img->nChannels);
 		uv_mutex_lock(&theclass->mutex_write_buf);
-		vector<uchar> &buff = theclass->send_msg_pool.front();
+		vector<uchar> buff = theclass->send_msg_pool.front();
+		theclass->send_msg_pool.pop();
 		printf("client:%d--size=%d\n",theclass->client_id,theclass->send_msg_pool.size());
 		uv_mutex_unlock(&theclass->mutex_write_buf);
 		//CvSize cz = cvSize(640,480);
@@ -169,7 +178,7 @@ void AcceptClient::PrepareCB( uv_prepare_t* handle )
 			
 		}
 	
-		theclass->send_msg_pool.pop();
+
 		
 	//	cvReleaseImage(&NewImg);//ÊÍ·ÅÍ¼ÏñÄÚ´æ
 		//cvReleaseImage(&image);

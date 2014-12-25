@@ -104,10 +104,12 @@ int __stdcall DecodeVideoCallBack(UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight,
 	{
 		return 0;
 	}
+	
 
 	CvSize cz = cvSize(640,480);
-	//IplImage *NewImg = cvCreateImage(cz,img->depth,img->nChannels);
-	//cvResize(img, NewImg,CV_INTER_LINEAR );
+	IplImage *NewImg = cvCreateImage(cz,img->depth,img->nChannels);
+	cvResize(img, NewImg,CV_INTER_LINEAR );
+	//cvSaveImage("E:\\test2.jpg",NewImg);
 	//  			 			cvReleaseImage(&img);//释放图像内存
 	//IplImage *image = YUV420_To_IplImage_Opencv(pImg[0], ImgWidth, ImgHeight);
 	//if (image == NULL)
@@ -125,14 +127,19 @@ int __stdcall DecodeVideoCallBack(UCHAR *pImg[3], UINT ImgWidth, UINT ImgHeight,
 	//	//return 0;
 	//}
 	//IplImage* NewImg=cvLoadImage("D:\\1.jpg",-1);
-	Mat src(img);
+	Mat src(NewImg);
 	vector<uchar> buff;//buffer for coding
 	vector<int> param = vector<int>(2);
 	param[0]=CV_IMWRITE_JPEG_QUALITY;
 	param[1]=60;//default(95) 0-100
 	imencode(".jpg",src,buff,param);
+	if (buff.size() ==0)
+	{
+		printf("dfdffffffffffffff***********************************\n");
+		exit(0);
+	}
 	//cvReleaseImage(&img);
-	//cvReleaseImage(&NewImg);
+	cvReleaseImage(&NewImg);
 	multimap<string,int>puid_client_map = server.puid_client_map;
 	uv_mutex_lock(&server.mutex_puid_client);
 	int num = puid_client_map.count(puid);
@@ -234,6 +241,7 @@ void ThreadFun(void *arg)
 	}
 	string tmp = client->recv_msg;//收到的消息
 	render_baton_t * baton = new render_baton_t();
+	baton->f_clip_limit = client->f_clip_limit;
 	alloc_cuda_memory(baton);
 	server.render_baton_map.insert(make_pair(tmp,baton));
 	unsigned char buffer[BUFFER_SIZE]={0};
@@ -316,8 +324,10 @@ void ReadCB(int cliendid, void *clientdata, const  char* buf,void *serverdata)
 	assert(server);
 	AcceptClient *client = (AcceptClient*)clientdata;
 	string tmp = buf;
+	
 	char *id = strtok((char*)buf,",");
 	char *index = strtok(NULL,",");
+	char *cliplimit = strtok(NULL,",");
 	uv_mutex_lock(&server->mutex_puid_count);
 	auto it = server->puid_count_map.find(tmp);
 	if (it != server->puid_count_map.end())
@@ -337,6 +347,7 @@ void ReadCB(int cliendid, void *clientdata, const  char* buf,void *serverdata)
 		client->recv_msg = tmp;
 		client->resource_puid = id;
 		client->resource_index = (index ==NULL ? 0:atoi((const char*)index));
+		client->f_clip_limit = (cliplimit == NULL? 3.5:atof(cliplimit));
 		server->puid_thread_map.insert(make_pair(tmp,client->threadId));
 		server->puid_client_map.insert(make_pair(tmp,cliendid));
 

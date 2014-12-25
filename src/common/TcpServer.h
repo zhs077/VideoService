@@ -57,6 +57,7 @@ public:
 	string resource_puid;//要获取的资源PUID
 	int resource_index;//资源索引
 	uv_thread_t threadId;//接收视频的线程ID
+	float f_clip_limit;//光亮强度
 private:
 	bool init();
 	void closeinl();

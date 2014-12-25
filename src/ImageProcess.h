@@ -35,6 +35,7 @@ typedef struct render_baton_t
 	uchar* d_pV ;
 	uchar* d_pD;
 	uchar* h_pHSV;
+	float f_clip_limit;
 
 }render_baton_t;
 
